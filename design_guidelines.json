@@ -1,0 +1,145 @@
+{
+  "project_name": "Arts of Finance - Lead & Admission Management System",
+  "app_type": "dashboard",
+  "archetype": "ORGANIC & EXECUTIVE HIGH-CONTRAST",
+  "theme_strategy": {
+    "default_mode": "light",
+    "theme_switchable": true,
+    "description": "Clean, high-trust, executive financial training institute portal with crisp borders, deep slate headers, vibrant emerald/green accents for conversion & WhatsApp actions, and warm subtle gold highlights for offer countdowns."
+  },
+  "typography": {
+    "font_family_heading": "Outfit, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "font_imports": "@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');",
+    "scale": {
+      "hero_title": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-none",
+      "h1": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+      "h2": "text-xl sm:text-2xl font-semibold tracking-tight",
+      "h3": "text-lg sm:text-xl font-semibold",
+      "h4_card": "text-base font-semibold",
+      "body_lead": "text-base font-medium leading-relaxed",
+      "body": "text-sm font-normal leading-normal",
+      "caption_badge": "text-xs font-semibold tracking-wide uppercase"
+    }
+  },
+  "colors": {
+    "light": {
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "surface_elevated": "#FFFFFF",
+      "border": "#E2E8F0",
+      "border_strong": "#CBD5E1",
+      "foreground_primary": "#0F172A",
+      "foreground_secondary": "#475569",
+      "foreground_muted": "#64748B",
+      "brand_primary": "#0F172A",
+      "brand_accent": "#0D9488",
+      "whatsapp_green": "#16A34A",
+      "whatsapp_green_hover": "#15803D",
+      "offer_orange": "#EA580C",
+      "offer_gold": "#D97706",
+      "danger": "#DC2626"
+    },
+    "dark": {
+      "background": "#090D16",
+      "surface": "#111827",
+      "surface_elevated": "#1F2937",
+      "border": "#1E293B",
+      "border_strong": "#334155",
+      "foreground_primary": "#F8FAFC",
+      "foreground_secondary": "#94A3B8",
+      "foreground_muted": "#64748B",
+      "brand_primary": "#38BDF8",
+      "brand_accent": "#14B8A6",
+      "whatsapp_green": "#22C55E",
+      "whatsapp_green_hover": "#16A34A",
+      "offer_orange": "#F97316",
+      "offer_gold": "#F59E0B",
+      "danger": "#EF4444"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous spacing system with strict card padding and clear visual hierarchy for fast Indian office staff usage.",
+    "container_padding": "px-4 sm:px-6 lg:px-8 py-6",
+    "card_padding": "p-5 sm:p-6",
+    "grid_gap": "gap-4 sm:gap-6",
+    "bento_strategy": "High Density Grid for Admin KPI & Counsellor My Leads. Single column responsive mobile view with direct touch-friendly tap targets."
+  },
+  "role_based_ux": {
+    "reception": {
+      "persona": "Front Desk Receptionist",
+      "goal": "Fast single-page walk-in student entry (~5-6 visits/day). Big touch buttons, instant duplicate phone check warning, success screen with assigned counsellor details."
+    },
+    "counsellor": {
+      "persona": "Course Admissions Counsellor",
+      "goal": "Immediate access to Today's Visits & Pending Follow-ups. Live 11:59 PM Offer Expiry Timer, big green 'Send on WhatsApp' click-to-chat action, payment link generator, quick note modal."
+    },
+    "admin": {
+      "persona": "Institute Director / Admin",
+      "goal": "Complete overview of Revenue, Visits, Conversion rate per Counsellor, Permission Matrix editor, Fee structure editor, WhatsApp template management, back-ups & soft-delete restore."
+    }
+  },
+  "key_components": [
+    {
+      "name": "Reception Visit Form",
+      "path": "src/components/reception/VisitForm.jsx",
+      "notes": "Large touch inputs, auto counsellor round-robin badge, consent checkbox, duplicate phone warning badge, immediate submit confirmation card."
+    },
+    {
+      "name": "New Lead Alert Modal",
+      "path": "src/components/leads/NewLeadAlertModal.jsx",
+      "notes": "Pops up when lead assigned. Pre-filled WhatsApp message preview with instant wa.me action."
+    },
+    {
+      "name": "Counsellor Lead Card & Timer",
+      "path": "src/components/leads/LeadCard.jsx",
+      "notes": "Displays course, status pill, same-day 10% discount countdown timer (expires 11:59 PM), fast WhatsApp button."
+    },
+    {
+      "name": "Lead Detail Page & Timeline",
+      "path": "src/components/leads/LeadDetail.jsx",
+      "notes": "Chronological audit log timeline (visits, notes, status changes, Razorpay payment status, receipts), template picker dropdown."
+    },
+    {
+      "name": "Admin Permission Matrix",
+      "path": "src/components/admin/PermissionMatrix.jsx",
+      "notes": "Toggle matrix grid (rows=roles/users, cols=permissions like lead_create, lead_delete, offer_override, view_analytics)."
+    },
+    {
+      "name": "Template Editor with Chips",
+      "path": "src/components/admin/TemplateEditor.jsx",
+      "notes": "Clickable dynamic chips like {student_name}, {course_name}, {offer_discount}, {counsellor_name} to insert into message body."
+    }
+  ],
+  "image_urls": {
+    "login_hero_bg": "https://images.unsplash.com/photo-1758874384555-37d50c0ee81a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwzfHxmaW5hbmNlJTIwc3R1ZGVudCUyMGRlc2slMjBvZmZpY2V8ZW58MHx8fHwxNzg5ODkzMzYyfDA&ixlib=rb-4.1.0&q=85",
+    "finance_desk_calc": "https://images.pexels.com/photos/8276209/pexels-photo-8276209.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "institute_logo_placeholder": "https://artsoffinance.in/wp-content/uploads/2023/04/arts-of-finance-logo.png"
+  },
+  "testing_guidelines": {
+    "data_testid_rules": "All interactive elements (buttons, inputs, select dropdowns, modals, role switchers, action triggers) must have explicit kebab-case data-testid attributes.",
+    "examples": [
+      "data-testid=\"visit-form-name-input\"",
+      "data-testid=\"visit-form-phone-input\"",
+      "data-testid=\"visit-form-course-select\"",
+      "data-testid=\"visit-form-submit-btn\"",
+      "data-testid=\"whatsapp-click-to-chat-btn\"",
+      "data-testid=\"create-payment-link-btn\"",
+      "data-testid=\"new-lead-alert-modal\"",
+      "data-testid=\"role-switcher-admin\"",
+      "data-testid=\"role-switcher-counsellor\"",
+      "data-testid=\"role-switcher-reception\"",
+      "data-testid=\"permission-toggle-row-col\""
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Follow the Javascript (.jsx) React convention for all components inside /app/frontend/src/.",
+    "Implement clear role switching in header for testing (Admin, Counsellor, Receptionist) with active user state.",
+    "Use Shadcn UI components from /app/frontend/src/components/ui/ for Dialog, Select, Dropdown, Tabs, Table, Badge, Input, Button, Card, Switch, Tooltip, Sonner toasts.",
+    "Ensure 10% offer logic displays countdown timer expiring at 11:59 PM today on visit creation day.",
+    "Simulate Razorpay test mode link generator and 45-second polling status update for instant receipt preview.",
+    "Ensure exact duplicate phone detection flags prior lead record before saving visit.",
+    "Ensure all buttons have hover states, aria labels, and data-testid attributes."
+  ]
+}
