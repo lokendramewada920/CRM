@@ -3,11 +3,12 @@ import os
 import io
 import csv
 import logging
+import openpyxl
 from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -220,11 +221,14 @@ async def check_duplicate(phone: str, _: dict = Depends(get_current_user)):
 
 @api.post("/leads")
 async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permission("lead.create"))):
-    if not body.consent:
+    entry_mode = body.entry_mode or "visit_form"
+    if entry_mode == "visit_form" and not body.consent:
         raise HTTPException(400, "Consent is required")
-    course = await courses.find_one({"id": body.course_id})
-    if not course:
-        raise HTTPException(400, "Course not found")
+    course = None
+    if body.course_id:
+        course = await courses.find_one({"id": body.course_id})
+        if not course:
+            raise HTTPException(400, "Course not found")
     counsellor_id = body.assigned_counsellor_id
     if not counsellor_id:
         counsellor_id = actor["id"] if actor["role"] == "counsellor" else await _round_robin_counsellor()
@@ -235,21 +239,21 @@ async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permissi
 
     doc = {
         "id": new_id(),
-        "name": body.name.strip(),
+        "name": (body.name or "").strip() or body.phone.strip(),
         "phone": body.phone.strip(),
         "email": (body.email or "").lower() or None,
         "city": body.city,
         "qualification": body.qualification,
-        "course_id": body.course_id,
+        "course_id": body.course_id or None,
         "source": body.source,
         "batch_preference": body.batch_preference,
         "assigned_counsellor_id": counsellor_id,
         "join_timeline": body.join_timeline,
-        "entry_mode": body.entry_mode or "visit_form",
+        "entry_mode": entry_mode,
         "status": "New",
         "visit_date": visit_dt.isoformat(),
         "offer_expires_at": offer_expires.isoformat(),
-        "consent": True,
+        "consent": bool(body.consent),
         "remarks": body.remarks,
         "created_by": actor["id"],
         "created_at": now_iso(),
@@ -258,8 +262,88 @@ async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permissi
     }
     to_insert = dict(doc)
     await leads.insert_one(to_insert)
-    await audit(actor["id"], actor["role"], "lead.create", "lead", doc["id"], {"course": course["name"]})
+    await audit(actor["id"], actor["role"], "lead.create", "lead", doc["id"], {"course": course["name"] if course else None})
     return doc
+
+
+@api.post("/leads/bulk-upload")
+async def bulk_upload_leads(file: UploadFile = File(...), actor: dict = Depends(require_permission("lead.create"))):
+    content = await file.read()
+    fname = (file.filename or "").lower()
+    rows: list[dict] = []
+    try:
+        if fname.endswith(".csv"):
+            text = content.decode("utf-8-sig", errors="ignore")
+            for r in csv.DictReader(io.StringIO(text)):
+                rows.append({(k or "").strip().lower(): (str(v).strip() if v is not None else "") for k, v in r.items()})
+        elif fname.endswith(".xlsx"):
+            wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+            ws = wb.active
+            it = ws.iter_rows(values_only=True)
+            headers = [str(h).strip().lower() if h is not None else "" for h in (next(it, []) or [])]
+            for r in it:
+                row = {}
+                for i, h in enumerate(headers):
+                    if h:
+                        val = r[i] if i < len(r) else None
+                        row[h] = str(val).strip() if val is not None else ""
+                if any(row.values()):
+                    rows.append(row)
+        else:
+            raise HTTPException(400, "Please upload a .xlsx or .csv file")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"Could not read file: {e}")
+
+    course_list = await courses.find({}, {"_id": 0}).to_list(500)
+    cmap = {c["name"].strip().lower(): c["id"] for c in course_list}
+    settings = await get_settings()
+
+    created = 0
+    skipped = 0
+    errors: list[str] = []
+    for idx, row in enumerate(rows, start=2):
+        phone = (row.get("phone") or row.get("mobile") or row.get("phone number") or "").replace(" ", "").replace("-", "")
+        if not phone:
+            skipped += 1
+            errors.append(f"Row {idx}: missing phone — skipped")
+            continue
+        if await leads.find_one({"phone": phone, "deleted_at": None}):
+            skipped += 1
+            errors.append(f"Row {idx}: duplicate phone {phone} — skipped")
+            continue
+        cn = (row.get("course") or row.get("course_name") or "").strip().lower()
+        course_id = cmap.get(cn)
+        counsellor_id = actor["id"] if actor["role"] == "counsellor" else await _round_robin_counsellor()
+        visit_dt = now_utc()
+        doc = {
+            "id": new_id(),
+            "name": (row.get("name") or "").strip() or phone,
+            "phone": phone,
+            "email": (row.get("email") or "").lower() or None,
+            "city": row.get("city") or None,
+            "qualification": row.get("qualification") or None,
+            "course_id": course_id,
+            "source": row.get("source") or "Bulk Import",
+            "batch_preference": row.get("batch_preference") or row.get("batch") or None,
+            "assigned_counsellor_id": counsellor_id,
+            "join_timeline": row.get("join_timeline") or row.get("join timeline") or None,
+            "entry_mode": "bulk",
+            "status": "New",
+            "visit_date": visit_dt.isoformat(),
+            "offer_expires_at": compute_offer_expiry(visit_dt, settings.get("offer_hours")).isoformat(),
+            "consent": True,
+            "remarks": row.get("remarks") or None,
+            "created_by": actor["id"],
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+            "deleted_at": None,
+        }
+        await leads.insert_one(dict(doc))
+        created += 1
+    await audit(actor["id"], actor["role"], "lead.bulk_upload", "lead", "-", {"created": created, "skipped": skipped})
+    return {"created": created, "skipped": skipped, "total": len(rows), "errors": errors[:50]}
 
 
 async def _apply_lead_visibility(user: dict, query: dict) -> dict:
@@ -354,7 +438,7 @@ async def dashboard_followups(counsellor_id: Optional[str] = None, user: dict = 
         key=lambda d: d["next_followup_date"],
     )
     no_date_list = [d for d in docs if not d.get("next_followup_date") and is_open(d)]
-    form_leads = [d for d in docs if d.get("entry_mode", "visit_form") != "manual"]
+    form_leads = [d for d in docs if d.get("entry_mode", "visit_form") == "visit_form"]
 
     return {
         "today": today_list,

@@ -22,6 +22,7 @@ React + FastAPI + MongoDB (deviating from Next.js/Prisma/SQLite because Emergent
 - CSV export, audit log, trash, daily Mongo → JSON backup (last 30 kept)
 - Reception WhatsApp send is gated by an admin toggle; counsellors can be given "view all" via toggle
 
+- **Bulk & manual (Jun 2026):** Bulk lead import via Excel/CSV — `POST /api/leads/bulk-upload` (openpyxl for .xlsx, csv for .csv), matches course by name, skips rows without phone + duplicate phones, tags `entry_mode="bulk"`. UI: "Upload Excel" dialog with sample-CSV download + import summary. Manual "Add Lead" now needs only phone (name falls back to phone; course/consent optional). Visited page = strictly `entry_mode=="visit_form"`; bulk/manual leads appear only under All Leads.
 - **Refinements (Jun 2026):** Reception Visit Form no longer picks a counsellor (auto round-robin); added "When do they want to join?" (Within 1-2 days / a week / 15 days / Not sure → `join_timeline`). Lead statuses expanded: New, Contacted, Visited, Interested, Possible Joining, Future Joining, Registered, Lost (shared `lib/statuses.js` + slugified CSS badge classes). Leads now carry `entry_mode` (visit_form|manual). Visited page shows only form-filled leads (`form_leads`) with a status filter + search; dashboard gained a separate **All Leads** section (`all_leads`). Counsellor dashboard has a one-tap **Aaj ka Plan** (Today's Plan) dialog listing today's + overdue calls/WhatsApps.
 
 ## Follow-up Module add-on (Jun 2026)

@@ -45,7 +45,7 @@ export default function VisitForm() {
     if (!form.course_id) { toast.error("Select a course"); return; }
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload = { ...form, email: form.email || null };
       const r = await api.post("/leads", payload);
       setSavedLead(r.data);
       toast.success("Visit saved — lead created");

@@ -42,19 +42,19 @@ class CourseIn(BaseModel):
 
 # ---------- Leads ----------
 class LeadCreateIn(BaseModel):
-    name: str
+    name: Optional[str] = None
     phone: str
     email: Optional[EmailStr] = None
     city: Optional[str] = None
     qualification: Optional[str] = None
-    course_id: str
+    course_id: Optional[str] = None
     source: Optional[str] = None
     batch_preference: Optional[str] = None
     assigned_counsellor_id: Optional[str] = None  # None = auto round-robin
     join_timeline: Optional[str] = None  # Within 1-2 days | Within a week | Within 15 days | Not sure
-    entry_mode: Optional[str] = None  # visit_form (default) | manual
+    entry_mode: Optional[str] = None  # visit_form (default) | manual | bulk
     remarks: Optional[str] = None
-    consent: bool
+    consent: bool = False
 
 
 class LeadUpdateIn(BaseModel):

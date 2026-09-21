@@ -12,7 +12,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { toast } from "sonner";
-import { Phone, MessageCircle, Plus, CalendarClock, CalendarCheck2, AlertTriangle, CircleHelp, Users2, ListChecks, Sparkles } from "lucide-react";
+import { Phone, MessageCircle, Plus, CalendarClock, CalendarCheck2, AlertTriangle, CircleHelp, Users2, ListChecks, Sparkles, Upload, FileDown } from "lucide-react";
 import { LEAD_STATUSES, statusClass } from "../lib/statuses";
 
 const STATUSES = LEAD_STATUSES;
@@ -52,6 +52,12 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(EMPTY_ADD);
   const [savingAdd, setSavingAdd] = useState(false);
+
+  // Bulk upload dialog
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
 
   const load = useCallback(() => {
     const qs = admin && filter !== "all" ? `?counsellor_id=${filter}` : "";
@@ -121,17 +127,44 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   // ---- Manual add ----
   const updAdd = (k, v) => setAddForm((f) => ({ ...f, [k]: v }));
   const submitAdd = async () => {
-    if (!addForm.name.trim() || !addForm.phone.trim()) { toast.error("Name and phone are required"); return; }
-    if (!addForm.course_id) { toast.error("Please select a course"); return; }
-    if (!addForm.consent) { toast.error("Consent is required"); return; }
+    if (!addForm.phone.trim()) { toast.error("Phone number is required"); return; }
     setSavingAdd(true);
     try {
-      await api.post("/leads", { ...addForm, assigned_counsellor_id: addForm.assigned_counsellor_id || null, entry_mode: "manual" });
+      await api.post("/leads", {
+        ...addForm,
+        name: addForm.name || null,
+        email: addForm.email || null,
+        course_id: addForm.course_id || null,
+        assigned_counsellor_id: addForm.assigned_counsellor_id || null,
+        entry_mode: "manual",
+      });
       toast.success("Enquiry added");
       setShowAdd(false); setAddForm(EMPTY_ADD); load();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Failed to add enquiry");
     } finally { setSavingAdd(false); }
+  };
+
+  // ---- Bulk upload ----
+  const uploadBulk = async () => {
+    if (!bulkFile) { toast.error("Please choose a .xlsx or .csv file"); return; }
+    setUploading(true); setBulkResult(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", bulkFile);
+      const r = await api.post("/leads/bulk-upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setBulkResult(r.data);
+      toast.success(`Imported ${r.data.created} leads (${r.data.skipped} skipped)`);
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Upload failed");
+    } finally { setUploading(false); }
+  };
+
+  const downloadSample = () => {
+    const csv = "name,phone,email,city,qualification,course,source,batch_preference,join_timeline\nRavi Kumar,9876543210,ravi@example.com,Mumbai,B.Com,Financial Modeling & Valuation,Instagram,Weekend,Within a week\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "leads_sample.csv"; a.click();
   };
 
   const counts = data?.counts || {};
@@ -199,6 +232,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
             </Select>
           )}
           {!isVisited && !admin && <Button variant="outline" onClick={() => setShowPlan(true)} data-testid="today-plan-btn"><Sparkles className="w-4 h-4 mr-2" /> Aaj ka Plan</Button>}
+          <Button variant="outline" onClick={() => { setShowBulk(true); setBulkResult(null); setBulkFile(null); }} data-testid="bulk-upload-btn"><Upload className="w-4 h-4 mr-2" /> Upload Excel</Button>
           <Button onClick={() => setShowAdd(true)} data-testid="manual-add-lead-btn"><Plus className="w-4 h-4 mr-2" /> Add Lead Manually</Button>
         </div>
       </div>
@@ -282,13 +316,13 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
         <DialogContent className="max-w-2xl" data-testid="manual-add-dialog">
           <DialogHeader><DialogTitle>Add Lead Manually</DialogTitle><DialogDescription>Add a walk-in or phone enquiry directly.</DialogDescription></DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="md:col-span-2"><Label>Full Name *</Label><Input value={addForm.name} onChange={(e) => updAdd("name", e.target.value)} data-testid="add-name" /></div>
+            <div className="md:col-span-2"><Label>Full Name</Label><Input value={addForm.name} onChange={(e) => updAdd("name", e.target.value)} data-testid="add-name" /></div>
             <div><Label>Phone (WhatsApp) *</Label><Input value={addForm.phone} onChange={(e) => updAdd("phone", e.target.value)} placeholder="10-digit mobile" data-testid="add-phone" /></div>
             <div><Label>Email</Label><Input type="email" value={addForm.email} onChange={(e) => updAdd("email", e.target.value)} data-testid="add-email" /></div>
             <div><Label>City</Label><Input value={addForm.city} onChange={(e) => updAdd("city", e.target.value)} data-testid="add-city" /></div>
             <div><Label>Qualification</Label><Input value={addForm.qualification} onChange={(e) => updAdd("qualification", e.target.value)} data-testid="add-qual" /></div>
             <div>
-              <Label>Course *</Label>
+              <Label>Course</Label>
               <Select value={addForm.course_id} onValueChange={(v) => updAdd("course_id", v)}>
                 <SelectTrigger data-testid="add-course"><SelectValue placeholder="Select a course" /></SelectTrigger>
                 <SelectContent>{courses.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
@@ -320,6 +354,30 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
             </div>
           </div>
           <DialogFooter><Button onClick={submitAdd} disabled={savingAdd} data-testid="add-submit">{savingAdd ? "Adding…" : "Add Enquiry"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk upload dialog */}
+      <Dialog open={showBulk} onOpenChange={setShowBulk}>
+        <DialogContent data-testid="bulk-upload-dialog">
+          <DialogHeader>
+            <DialogTitle>Bulk Upload Leads (Excel / CSV)</DialogTitle>
+            <DialogDescription>Upload a .xlsx or .csv file. Only <b>phone</b> is required in each row.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-xs text-slate-500">
+              Header row columns: name, phone, email, city, qualification, course, source, batch_preference, join_timeline. Rows without a phone and duplicate phones are skipped.
+            </div>
+            <Button variant="ghost" size="sm" onClick={downloadSample} data-testid="bulk-sample-btn"><FileDown className="w-4 h-4 mr-2" /> Download sample CSV</Button>
+            <Input type="file" accept=".xlsx,.csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} data-testid="bulk-file-input" />
+            {bulkResult && (
+              <div className="p-3 rounded bg-slate-50 text-sm" data-testid="bulk-result">
+                <div className="font-medium text-emerald-700">Imported {bulkResult.created} · Skipped {bulkResult.skipped} (of {bulkResult.total})</div>
+                {bulkResult.errors?.length > 0 && <ul className="mt-2 text-xs text-rose-600 list-disc pl-4 max-h-40 overflow-y-auto">{bulkResult.errors.map((er, i) => <li key={i}>{er}</li>)}</ul>}
+              </div>
+            )}
+          </div>
+          <DialogFooter><Button onClick={uploadBulk} disabled={uploading} data-testid="bulk-upload-submit">{uploading ? "Uploading…" : "Upload"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
