@@ -1,0 +1,112 @@
+[
+  {
+    "id": "2d300161-d8e9-4452-95fc-f8a1520bdbee",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "auth.login",
+    "entity": "user",
+    "entity_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "meta": {},
+    "created_at": "2026-09-20T08:40:51.544417+00:00"
+  },
+  {
+    "id": "8dd876d3-e3ca-419d-b059-ac0777ed3542",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "auth.login",
+    "entity": "user",
+    "entity_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "meta": {},
+    "created_at": "2026-09-20T08:46:38.252017+00:00"
+  },
+  {
+    "id": "4ad0f186-68c8-4693-a539-ba703b11c483",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "auth.login",
+    "entity": "user",
+    "entity_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "meta": {},
+    "created_at": "2026-09-20T08:47:39.844443+00:00"
+  },
+  {
+    "id": "28fe2cb4-2f0f-4e8c-b4ed-cac32ee0879f",
+    "actor_id": "85a75d23-8c81-41f8-8dad-9f9c826c3b93",
+    "actor_role": "counsellor",
+    "action": "auth.login",
+    "entity": "user",
+    "entity_id": "85a75d23-8c81-41f8-8dad-9f9c826c3b93",
+    "meta": {},
+    "created_at": "2026-09-20T08:47:40.054816+00:00"
+  },
+  {
+    "id": "354da2f7-9797-4204-a51e-b6e7c0bc1df7",
+    "actor_id": "6ed1b2a2-736e-4229-8140-4a49887b80d1",
+    "actor_role": "reception",
+    "action": "auth.login",
+    "entity": "user",
+    "entity_id": "6ed1b2a2-736e-4229-8140-4a49887b80d1",
+    "meta": {},
+    "created_at": "2026-09-20T08:47:40.343983+00:00"
+  },
+  {
+    "id": "58fdf47b-3849-463f-b0c8-3119c5ae0664",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "settings.update",
+    "entity": "settings",
+    "entity_id": "singleton",
+    "meta": {
+      "counsellors_view_all": true,
+      "updated_at": "2026-09-20T08:47:43.129199+00:00"
+    },
+    "created_at": "2026-09-20T08:47:43.129935+00:00"
+  },
+  {
+    "id": "dbc355a1-8131-411f-bfd2-ee3aee242a67",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "settings.update",
+    "entity": "settings",
+    "entity_id": "singleton",
+    "meta": {
+      "reception_can_send_whatsapp": true,
+      "updated_at": "2026-09-20T08:47:43.669111+00:00"
+    },
+    "created_at": "2026-09-20T08:47:43.669723+00:00"
+  },
+  {
+    "id": "a795746d-d0bb-4469-8d03-6ef26b05cbec",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "role.update",
+    "entity": "role",
+    "entity_id": "counsellor",
+    "meta": {
+      "permissions": [
+        "lead.view_all",
+        "lead.edit"
+      ]
+    },
+    "created_at": "2026-09-20T08:48:13.397877+00:00"
+  },
+  {
+    "id": "7beee296-b369-460f-9094-f0bbeadca5f2",
+    "actor_id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "actor_role": "admin",
+    "action": "role.update",
+    "entity": "role",
+    "entity_id": "counsellor",
+    "meta": {
+      "permissions": [
+        "lead.view_own",
+        "lead.view_all",
+        "lead.edit",
+        "payment.create",
+        "message.send",
+        "followup.manage"
+      ]
+    },
+    "created_at": "2026-09-20T08:48:14.633083+00:00"
+  }
+]

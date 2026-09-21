@@ -1,0 +1,50 @@
+[
+  {
+    "id": "6e177e15-16e1-4d36-8bff-466daab62833",
+    "name": "Admin",
+    "email": "admin@artsoffinance.in",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$krXLelRlh8img53X8w2fjg$/pT95ntuupE8fePi3CnF+Fd1OrY0BXwkkKYwtFArn0E",
+    "role": "admin",
+    "phone": "9999900001",
+    "active": true,
+    "permission_overrides": [],
+    "permission_revokes": [],
+    "created_at": "2026-09-20T08:40:16.837622+00:00"
+  },
+  {
+    "id": "85a75d23-8c81-41f8-8dad-9f9c826c3b93",
+    "name": "Priya (Counsellor)",
+    "email": "priya@artsoffinance.in",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$fFolYjtHMhf0NwazaxPaVA$IrDoQj0fbTZd759I+Zx4xTVGaKPH5wxHOEAYCwE1VR0",
+    "role": "counsellor",
+    "phone": "9999900002",
+    "active": true,
+    "permission_overrides": [],
+    "permission_revokes": [],
+    "created_at": "2026-09-20T08:40:16.946238+00:00"
+  },
+  {
+    "id": "1fe0ace4-e886-4086-bf61-93df5a6c274b",
+    "name": "Rahul (Counsellor)",
+    "email": "rahul@artsoffinance.in",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$ZGeQEDAb6GTAXmb0sK6Rdg$8IuzNtmEf5QXIrXpkb7AMIQT8bcgUGC2Cwb6cSCuFqc",
+    "role": "counsellor",
+    "phone": "9999900003",
+    "active": true,
+    "permission_overrides": [],
+    "permission_revokes": [],
+    "created_at": "2026-09-20T08:40:17.053687+00:00"
+  },
+  {
+    "id": "6ed1b2a2-736e-4229-8140-4a49887b80d1",
+    "name": "Reception",
+    "email": "reception@artsoffinance.in",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$F1vKyaJQe7BtK0Q/uTzGKA$MmuJ0xxyLSfbd06JT0Wx6LeDyXLD/pqwKtP3Trb1tUA",
+    "role": "reception",
+    "phone": "9999900004",
+    "active": true,
+    "permission_overrides": [],
+    "permission_revokes": [],
+    "created_at": "2026-09-20T08:40:17.239804+00:00"
+  }
+]

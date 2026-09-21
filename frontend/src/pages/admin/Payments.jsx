@@ -11,7 +11,7 @@ export default function PaymentsPage() {
   const [items, setItems] = useState([]);
   const [receipts, setReceipts] = useState([]);
   const load = () => { api.get("/payments").then((r) => setItems(r.data)); api.get("/receipts").then((r) => setReceipts(r.data)); };
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
   const pollNow = async () => { const r = await api.post("/payments/poll-now"); toast.success(`Updated: ${r.data.updated}`); load(); };
 
   return (

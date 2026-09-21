@@ -1,0 +1,9 @@
+[
+  {
+    "id": "2c765873-1093-4bba-a06d-2136034c5946",
+    "name": "Default visit follow-up",
+    "body": "Hello {student_name}, thank you for visiting Arts of Finance today! Register TODAY with just Rs.{registration_amount} and get {discount_percent}% OFF on {course_name} (Fee Rs.{course_fee} -> Rs.{discounted_fee}). Offer valid till {offer_valid_till}. Pay here: {payment_link}",
+    "is_default": true,
+    "created_at": "2026-09-20T08:40:17.252678+00:00"
+  }
+]

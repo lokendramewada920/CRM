@@ -15,7 +15,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({ name:"", email:"", password:"", role:"counsellor", phone:"" });
 
   const load = () => api.get("/users").then((r) => setItems(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const create = async () => {
     try { await api.post("/users", form); toast.success("User created"); setOpen(false); setForm({ name:"", email:"", password:"", role:"counsellor", phone:"" }); load(); }

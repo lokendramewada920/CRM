@@ -13,7 +13,7 @@ export default function CoursesPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name:"", total_fee:0, duration:"", active:true });
   const load = () => api.get("/courses").then((r) => setItems(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const save = async () => {
     try { await api.post("/courses", { ...form, total_fee: Number(form.total_fee) }); toast.success("Course added"); setOpen(false); setForm({ name:"", total_fee:0, duration:"", active:true }); load(); }

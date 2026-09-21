@@ -21,11 +21,8 @@ export default function MyLeads() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState("today");
 
-  const load = () => {
-    api.get("/leads").then((r) => setLeads(r.data));
-    api.get("/followups/mine").then((r) => setFollowups(r.data));
-  };
-  useEffect(load, []);
+  const load = () => { api.get("/leads").then((r) => setLeads(r.data)); api.get("/followups/mine").then((r) => setFollowups(r.data)); };
+  useEffect(() => { load(); }, []);
 
   const today = new Date().toISOString().slice(0, 10);
   const shown = leads.filter((l) => {

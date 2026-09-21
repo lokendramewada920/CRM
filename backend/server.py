@@ -118,7 +118,8 @@ async def create_user(body: UserCreateIn, actor: dict = Depends(require_permissi
         "permission_revokes": [],
         "created_at": now_iso(),
     }
-    await users.insert_one(doc)
+    to_insert = dict(doc)
+    await users.insert_one(to_insert)
     await audit(actor["id"], actor["role"], "user.create", "user", doc["id"], {"email": doc["email"]})
     doc.pop("password_hash", None)
     return doc
@@ -180,7 +181,8 @@ async def list_courses(active_only: bool = False, _: dict = Depends(get_current_
 @api.post("/courses")
 async def create_course(body: CourseIn, actor: dict = Depends(require_permission("course.manage"))):
     doc = {"id": new_id(), **body.model_dump(), "created_at": now_iso()}
-    await courses.insert_one(doc)
+    to_insert = dict(doc)
+    await courses.insert_one(to_insert)
     await audit(actor["id"], actor["role"], "course.create", "course", doc["id"], None)
     return doc
 
@@ -249,7 +251,8 @@ async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permissi
         "updated_at": now_iso(),
         "deleted_at": None,
     }
-    await leads.insert_one(doc)
+    to_insert = dict(doc)
+    await leads.insert_one(to_insert)
     await audit(actor["id"], actor["role"], "lead.create", "lead", doc["id"], {"course": course["name"]})
     return doc
 
@@ -349,7 +352,8 @@ async def restore_lead(lid: str, actor: dict = Depends(require_permission("lead.
 async def add_note(lid: str, body: NoteIn, user: dict = Depends(require_permission("notes.add"))):
     doc = {"id": new_id(), "lead_id": lid, "author_id": user["id"], "author_name": user["name"],
            "text": body.text, "created_at": now_iso()}
-    await notes.insert_one(doc)
+    to_insert = dict(doc)
+    await notes.insert_one(to_insert)
     await audit(user["id"], user["role"], "note.add", "lead", lid, None)
     return doc
 
@@ -359,7 +363,8 @@ async def add_note(lid: str, body: NoteIn, user: dict = Depends(require_permissi
 async def add_followup(lid: str, body: FollowUpIn, user: dict = Depends(require_permission("followup.manage"))):
     doc = {"id": new_id(), "lead_id": lid, "user_id": user["id"], "due_at": body.due_at.isoformat(),
            "note": body.note, "completed": False, "created_at": now_iso()}
-    await followups.insert_one(doc)
+    to_insert = dict(doc)
+    await followups.insert_one(to_insert)
     return doc
 
 
@@ -388,7 +393,8 @@ async def create_template(body: TemplateIn, actor: dict = Depends(require_permis
     if body.is_default:
         await templates.update_many({}, {"$set": {"is_default": False}})
     doc = {"id": new_id(), **body.model_dump(), "created_at": now_iso()}
-    await templates.insert_one(doc)
+    to_insert = dict(doc)
+    await templates.insert_one(to_insert)
     await audit(actor["id"], actor["role"], "template.create", "template", doc["id"], None)
     return doc
 
@@ -450,16 +456,21 @@ async def preview_message(lid: str, template_id: Optional[str] = None, user: dic
 
 
 @api.post("/message-log")
-async def log_message(body: MessageLogIn, user: dict = Depends(require_permission("message.send"))):
-    # Reception toggle
+async def log_message(body: MessageLogIn, user: dict = Depends(get_current_user)):
+    # Reception is allowed only when admin has toggled it on. Everyone else needs message.send perm.
     if user["role"] == "reception":
         s = await get_settings()
         if not s.get("reception_can_send_whatsapp"):
             raise HTTPException(403, "Reception is not allowed to send WhatsApp (admin has disabled)")
+    else:
+        perms = await get_effective_permissions(user)
+        if "message.send" not in perms:
+            raise HTTPException(403, "Missing permission: message.send")
     doc = {"id": new_id(), "lead_id": body.lead_id, "template_id": body.template_id,
            "rendered_body": body.rendered_body, "channel": body.channel,
            "sender_id": user["id"], "sender_name": user["name"], "created_at": now_iso()}
-    await message_logs.insert_one(doc)
+    to_insert = dict(doc)
+    await message_logs.insert_one(to_insert)
     await audit(user["id"], user["role"], "message.send", "lead", body.lead_id, {"channel": body.channel})
     return doc
 
@@ -501,7 +512,8 @@ async def create_payment_link(body: CreatePaymentLinkIn, user: dict = Depends(re
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
-    await payments.insert_one(doc)
+    to_insert = dict(doc)
+    await payments.insert_one(to_insert)
     await audit(user["id"], user["role"], "payment.create", "lead", lead["id"], {"link_id": info["link_id"]})
     return doc
 

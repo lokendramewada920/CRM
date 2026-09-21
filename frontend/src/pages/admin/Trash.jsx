@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export default function TrashPage() {
   const [items, setItems] = useState([]);
   const load = () => api.get("/trash/leads").then((r) => setItems(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
   const restore = async (id) => { await api.post(`/leads/${id}/restore`); toast.success("Restored"); load(); };
   return (
     <div>

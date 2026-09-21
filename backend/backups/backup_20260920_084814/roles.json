@@ -1,0 +1,50 @@
+[
+  {
+    "name": "admin",
+    "created_at": "2026-09-20T08:40:16.701652+00:00",
+    "id": "7ade3458-b691-4776-a8bf-cdff04b701f4",
+    "permissions": [
+      "lead.create",
+      "lead.view_own",
+      "lead.view_all",
+      "lead.edit",
+      "lead.delete",
+      "lead.restore",
+      "notes.add",
+      "followup.manage",
+      "message.send",
+      "template.manage",
+      "payment.create",
+      "payment.view",
+      "course.manage",
+      "user.manage",
+      "role.manage",
+      "settings.manage",
+      "reports.view",
+      "audit.view",
+      "backup.manage"
+    ]
+  },
+  {
+    "name": "counsellor",
+    "created_at": "2026-09-20T08:40:16.710711+00:00",
+    "id": "5c0bc40d-f593-4509-afc8-14bc9c3bea1f",
+    "permissions": [
+      "lead.view_own",
+      "lead.view_all",
+      "lead.edit",
+      "payment.create",
+      "message.send",
+      "followup.manage"
+    ],
+    "updated_at": "2026-09-20T08:48:14.632578+00:00"
+  },
+  {
+    "name": "reception",
+    "created_at": "2026-09-20T08:40:16.711201+00:00",
+    "id": "eebcf095-daa2-4a9d-a5c3-5ffa8e9c5580",
+    "permissions": [
+      "lead.create"
+    ]
+  }
+]

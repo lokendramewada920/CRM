@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Chartered Financial Analyst (CFA) Level 1",
+    "active": true,
+    "created_at": "2026-09-20T08:40:17.240781+00:00",
+    "duration": "6 months",
+    "id": "f1530808-0d59-4ac0-b436-858eac7183d2",
+    "total_fee": 45000
+  },
+  {
+    "name": "Financial Modeling & Valuation",
+    "active": true,
+    "created_at": "2026-09-20T08:40:17.251451+00:00",
+    "duration": "3 months",
+    "id": "cf88d472-a25d-4000-b733-bd873f350603",
+    "total_fee": 25000
+  },
+  {
+    "name": "Investment Banking Certification",
+    "active": true,
+    "created_at": "2026-09-20T08:40:17.252013+00:00",
+    "duration": "4 months",
+    "id": "c89a3f69-9f87-4c87-82de-f5be20915acf",
+    "total_fee": 35000
+  }
+]

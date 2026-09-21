@@ -19,7 +19,7 @@ export default function AllLeads() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("All");
   const load = () => api.get("/leads").then((r) => setLeads(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const shown = leads.filter((l) =>
     (status === "All" || l.status === status) &&

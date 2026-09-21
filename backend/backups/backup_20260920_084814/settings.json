@@ -1,0 +1,11 @@
+[
+  {
+    "id": "singleton",
+    "counsellors_view_all": true,
+    "discount_percent": 10.0,
+    "offer_hours": null,
+    "reception_can_send_whatsapp": true,
+    "registration_amount": 1000.0,
+    "updated_at": "2026-09-20T08:47:43.669111+00:00"
+  }
+]

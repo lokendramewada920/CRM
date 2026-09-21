@@ -81,6 +81,7 @@ async def _apply_payment_update(payment: dict, info: dict) -> None:
         except Exception as e:  # noqa: BLE001
             log.error("receipt pdf failed: %s", e)
         await receipts_coll.insert_one(dict(rec_doc))
+        rec_doc.pop("_id", None)
         # Update lead status
         await leads.update_one({"id": lead["id"]}, {"$set": {"status": "Registered", "updated_at": now_iso()}})
         await audit("system", "system", "payment.paid", "payment", payment["id"], {"lead_id": lead["id"]})
@@ -107,7 +108,7 @@ def start_scheduler() -> None:
     if scheduler.running:
         return
     interval = int(os.environ.get("POLL_INTERVAL_SECONDS", "45"))
-    scheduler.add_job(lambda: asyncio.create_task(poll_pending_payments()), "interval", seconds=interval, id="poll_payments", replace_existing=True)
-    scheduler.add_job(lambda: asyncio.create_task(daily_backup()), "cron", hour=2, minute=0, id="daily_backup", replace_existing=True)
+    scheduler.add_job(poll_pending_payments, "interval", seconds=interval, id="poll_payments", replace_existing=True)
+    scheduler.add_job(daily_backup, "cron", hour=2, minute=0, id="daily_backup", replace_existing=True)
     scheduler.start()
     log.info("Scheduler started: poll every %ss + daily backup at 02:00 UTC", interval)

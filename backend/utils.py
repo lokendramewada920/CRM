@@ -59,7 +59,7 @@ async def audit(actor_id: str, actor_role: str, action: str, entity: str, entity
         "meta": meta or {},
         "created_at": now_iso(),
     }
-    await audit_logs.insert_one(doc)
+    await audit_logs.insert_one(dict(doc))
 
 
 def render_template(body: str, vars: dict) -> str:

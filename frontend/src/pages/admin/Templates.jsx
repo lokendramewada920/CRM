@@ -17,7 +17,7 @@ export default function TemplatesPage() {
   const [editId, setEditId] = useState(null);
 
   const load = () => api.get("/templates").then((r) => setItems(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const insertVar = (v) => {
     const ta = bodyRef.current;
