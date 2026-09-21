@@ -17,6 +17,14 @@ def now_iso() -> str:
     return now_utc().isoformat()
 
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def ist_date_str(offset_days: int = 0) -> str:
+    """IST calendar date as 'YYYY-MM-DD' (optionally shifted by offset_days)."""
+    return (datetime.now(IST) + timedelta(days=offset_days)).strftime("%Y-%m-%d")
+
+
 def strip_id(doc: Optional[dict]) -> Optional[dict]:
     if doc is None:
         return None

@@ -17,6 +17,7 @@ leads = db.leads
 courses = db.courses
 notes = db.notes
 followups = db.followups
+lead_updates = db.lead_updates
 message_logs = db.message_logs
 templates = db.templates
 payments = db.payments
@@ -31,6 +32,8 @@ async def ensure_indexes() -> None:
     await leads.create_index("assigned_counsellor_id")
     await leads.create_index("status")
     await leads.create_index("deleted_at")
+    await leads.create_index("next_followup_date")
+    await lead_updates.create_index("lead_id")
     await payments.create_index("razorpay_link_id", unique=True, sparse=True)
     await payments.create_index("status")
     await audit_logs.create_index([("created_at", -1)])

@@ -11,7 +11,7 @@ import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { toast } from "sonner";
-import { MessageCircle, CreditCard, ChevronLeft, RefreshCw, FileText } from "lucide-react";
+import { MessageCircle, CreditCard, ChevronLeft, RefreshCw, FileText, Trash2 } from "lucide-react";
 
 const STATUSES = ["New","Contacted","Interested","Registered","Lost"];
 
@@ -29,6 +29,12 @@ export default function LeadDetail() {
   const [showFu, setShowFu] = useState(false);
   const [fuDue, setFuDue] = useState("");
   const [fuNote, setFuNote] = useState("");
+  const [uDiscussed, setUDiscussed] = useState("");
+  const [uStatus, setUStatus] = useState("Contacted");
+  const [uDate, setUDate] = useState("");
+  const [uTime, setUTime] = useState("");
+  const [uLost, setULost] = useState("");
+  const [savingU, setSavingU] = useState(false);
 
   const load = () => api.get(`/leads/${id}`).then((r) => setLead(r.data));
 
@@ -95,6 +101,34 @@ export default function LeadDetail() {
     toast.success("Follow-up scheduled");
   };
 
+  const uClosing = ["Registered", "Lost"].includes(uStatus);
+  const addUpdate = async () => {
+    if (!uDiscussed.trim()) { toast.error("Please describe what was discussed"); return; }
+    if (!uClosing && !uDate) { toast.error("Next follow-up date is required"); return; }
+    if (uStatus === "Lost" && !uLost.trim()) { toast.error("Please provide a reason for Lost"); return; }
+    setSavingU(true);
+    try {
+      await api.post(`/leads/${id}/updates`, {
+        discussed: uDiscussed, status: uStatus,
+        next_followup_date: uClosing ? null : uDate,
+        next_followup_time: uClosing ? null : (uTime || null),
+        lost_reason: uStatus === "Lost" ? uLost : null,
+      });
+      setUDiscussed(""); setUDate(""); setUTime(""); setULost("");
+      toast.success("Follow-up update saved");
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to save update");
+    } finally { setSavingU(false); }
+  };
+
+  const deleteUpdate = async (uid) => {
+    if (!window.confirm("Delete this follow-up update?")) return;
+    await api.delete(`/updates/${uid}`);
+    toast.success("Update deleted");
+    load();
+  };
+
   if (!lead) return <div className="p-10 text-slate-500">Loading...</div>;
   const course = courses.find((c) => c.id === lead.course_id);
 
@@ -133,6 +167,65 @@ export default function LeadDetail() {
               <div>
                 <Label>Offer Expires</Label>
                 <div className="text-sm mt-2 offer-chip px-2 py-1 rounded inline-block">{new Date(lead.offer_expires_at).toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t">
+              <h3 className="font-semibold mb-3">Add Follow-up Update</h3>
+              <div className="space-y-3 p-3 rounded-lg bg-teal-50/60 border border-teal-100">
+                <div>
+                  <Label>What was discussed *</Label>
+                  <Textarea rows={2} value={uDiscussed} onChange={(e) => setUDiscussed(e.target.value)} placeholder="e.g. Discussed fee & weekend batch, will call back" data-testid="fu-update-discussed-input" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Lead status</Label>
+                    <Select value={uStatus} onValueChange={setUStatus}>
+                      <SelectTrigger data-testid="fu-update-status-select"><SelectValue /></SelectTrigger>
+                      <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  {!uClosing && (
+                    <>
+                      <div>
+                        <Label>Next follow-up date *</Label>
+                        <Input type="date" value={uDate} onChange={(e) => setUDate(e.target.value)} data-testid="fu-update-date-input" />
+                      </div>
+                      <div>
+                        <Label>Time (optional)</Label>
+                        <Input type="time" value={uTime} onChange={(e) => setUTime(e.target.value)} data-testid="fu-update-time-input" />
+                      </div>
+                    </>
+                  )}
+                </div>
+                {uStatus === "Lost" && (
+                  <div>
+                    <Label>Reason for marking Lost *</Label>
+                    <Input value={uLost} onChange={(e) => setULost(e.target.value)} placeholder="e.g. Joined another institute" data-testid="fu-update-lost-input" />
+                  </div>
+                )}
+                <Button onClick={addUpdate} disabled={savingU} data-testid="fu-update-save-btn">{savingU ? "Saving…" : "Save Update"}</Button>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t">
+              <h3 className="font-semibold mb-2">Follow-up Timeline ({lead.updates?.length || 0})</h3>
+              <div className="space-y-2" data-testid="fu-timeline">
+                {(lead.updates || []).map((u) => (
+                  <div key={u.id} className="p-3 bg-slate-50 rounded text-sm" data-testid={`fu-update-${u.id}`}>
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="text-xs text-slate-500">{u.author_name} · {new Date(u.created_at).toLocaleString()}</div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge className={`status-${u.status}`}>{u.status}</Badge>
+                        {user.role === "admin" && <Button size="sm" variant="ghost" className="h-6 px-1" onClick={() => deleteUpdate(u.id)} data-testid={`fu-update-delete-${u.id}`}><Trash2 className="w-3.5 h-3.5" /></Button>}
+                      </div>
+                    </div>
+                    <div className="mt-1">{u.discussed}</div>
+                    {u.lost_reason && <div className="mt-1 text-xs text-rose-600">Lost reason: {u.lost_reason}</div>}
+                    {u.next_followup_date && <div className="mt-1 text-xs text-teal-700 font-medium">Next follow-up: {u.next_followup_date}{u.next_followup_time ? ` at ${u.next_followup_time}` : ""}</div>}
+                  </div>
+                ))}
+                {(!lead.updates || lead.updates.length === 0) && <div className="text-xs text-slate-400">No follow-up updates yet.</div>}
               </div>
             </div>
 

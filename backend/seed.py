@@ -1,9 +1,9 @@
 """Idempotent seed: 1 admin, 2 counsellors, 1 reception + 3 courses + default template + settings + roles."""
 import asyncio
-from db import users, courses, templates, roles, settings_coll, ensure_indexes
+from db import users, courses, templates, roles, settings_coll, leads, lead_updates, ensure_indexes
 from auth import hash_password
-from utils import new_id, now_iso
-from permissions import DEFAULT_ROLE_PERMISSIONS
+from utils import new_id, now_iso, now_utc, compute_offer_expiry, ist_date_str
+from permissions import DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS
 
 
 DEFAULT_TEMPLATE = (
@@ -24,6 +24,9 @@ async def seed() -> None:
             {"$setOnInsert": {"id": new_id(), "name": rname, "permissions": perms, "created_at": now_iso()}},
             upsert=True,
         )
+    # Ensure existing role docs pick up newly added permissions (safe migration)
+    await roles.update_one({"name": "admin"}, {"$set": {"permissions": ALL_PERMISSIONS}})
+    await roles.update_one({"name": "counsellor"}, {"$addToSet": {"permissions": "followup.add_own"}})
 
     # Settings singleton
     await settings_coll.update_one(
@@ -90,6 +93,48 @@ async def seed() -> None:
         })
 
     print("Seed complete.")
+    await _seed_demo_followups()
+
+
+async def _seed_demo_followups() -> None:
+    """Idempotent demo leads with follow-up updates so Today/Overdue/Upcoming sections can be tested."""
+    if await leads.find_one({"demo": True}):
+        return
+    priya = await users.find_one({"email": "priya@artsoffinance.in"})
+    course = await courses.find_one({})
+    if not priya or not course:
+        return
+    samples = [
+        ("Aarav Sharma", "9810000001", "today", "Contacted", "Interested in weekend batch, asked for full fee details"),
+        ("Isha Verma", "9810000002", "overdue", "Interested", "Wanted to discuss with parents, promised a callback"),
+        ("Rohan Mehta", "9810000003", "overdue", "Contacted", "Asked about EMI / instalment options"),
+        ("Sneha Nair", "9810000004", "tomorrow", "Interested", "Will visit again with documents"),
+        ("Kabir Singh", "9810000005", "upcoming", "New", "First enquiry, brochure shared on WhatsApp"),
+        ("Ananya Rao", "9810000006", "none", "New", "Walk-in enquiry, no callback scheduled yet"),
+    ]
+    day_map = {"today": ist_date_str(0), "overdue": ist_date_str(-2), "tomorrow": ist_date_str(1), "upcoming": ist_date_str(4), "none": None}
+    for name, phone, when, status, discussed in samples:
+        visit_dt = now_utc()
+        lid = new_id()
+        nfd = day_map[when]
+        await leads.insert_one({
+            "id": lid, "name": name, "phone": phone, "email": None, "city": "Mumbai",
+            "qualification": "B.Com", "course_id": course["id"], "source": "Walk-in",
+            "batch_preference": "Weekend", "assigned_counsellor_id": priya["id"],
+            "status": status, "visit_date": visit_dt.isoformat(),
+            "offer_expires_at": compute_offer_expiry(visit_dt, None).isoformat(),
+            "consent": True, "remarks": "", "created_by": priya["id"],
+            "created_at": now_iso(), "updated_at": now_iso(), "deleted_at": None,
+            "next_followup_date": nfd, "next_followup_time": None, "demo": True,
+        })
+        await lead_updates.insert_one({
+            "id": new_id(), "lead_id": lid, "type": "followup",
+            "author_id": priya["id"], "author_name": priya["name"],
+            "discussed": discussed, "status": status,
+            "next_followup_date": nfd, "next_followup_time": None, "lost_reason": None,
+            "created_at": now_iso(),
+        })
+    print("Demo follow-up data seeded.")
 
 
 if __name__ == "__main__":

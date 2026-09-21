@@ -15,7 +15,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from db import (
-    users, roles, leads, courses, notes, followups,
+    users, roles, leads, courses, notes, followups, lead_updates,
     message_logs, templates, payments, receipts as receipts_coll,
     audit_logs, settings_coll, ensure_indexes,
 )
@@ -27,10 +27,11 @@ from auth import (
 from models import (
     LoginIn, TokenOut, UserCreateIn, UserUpdateIn, CourseIn,
     LeadCreateIn, LeadUpdateIn, NoteIn, FollowUpIn, FollowUpCompleteIn,
+    FollowUpUpdateIn, AssignLeadIn, BulkAssignIn,
     TemplateIn, MessageLogIn, CreatePaymentLinkIn, SettingsIn, RoleUpdateIn,
 )
 from permissions import ALL_PERMISSIONS
-from utils import new_id, now_iso, now_utc, get_settings, compute_offer_expiry, audit, render_template
+from utils import new_id, now_iso, now_utc, ist_date_str, get_settings, compute_offer_expiry, audit, render_template
 from payments_provider import get_provider
 from scheduler import start_scheduler, poll_pending_payments, daily_backup
 
@@ -313,6 +314,7 @@ async def get_lead(lid: str, user: dict = Depends(get_current_user)):
                 raise HTTPException(403, "Not your lead")
     # attach related
     doc["notes"] = await notes.find({"lead_id": lid}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    doc["updates"] = await lead_updates.find({"lead_id": lid}, {"_id": 0}).sort("created_at", -1).to_list(500)
     doc["followups"] = await followups.find({"lead_id": lid}, {"_id": 0}).sort("due_at", 1).to_list(500)
     doc["messages"] = await message_logs.find({"lead_id": lid}, {"_id": 0}).sort("created_at", -1).to_list(500)
     doc["payments"] = await payments.find({"lead_id": lid}, {"_id": 0}).sort("created_at", -1).to_list(500)
@@ -378,6 +380,58 @@ async def complete_followup(fid: str, body: FollowUpCompleteIn, user: dict = Dep
 async def my_followups(user: dict = Depends(get_current_user)):
     docs = await followups.find({"user_id": user["id"], "completed": False}, {"_id": 0}).sort("due_at", 1).to_list(500)
     return docs
+
+
+# ---- Follow-up Updates (discussion timeline) ----
+FU_STATUSES = {"New", "Contacted", "Interested", "Registered", "Lost"}
+
+
+@api.post("/leads/{lid}/updates")
+async def add_lead_update(lid: str, body: FollowUpUpdateIn, user: dict = Depends(get_current_user)):
+    perms = await get_effective_permissions(user)
+    if "followup.add_own" not in perms and "followup.view_all" not in perms:
+        raise HTTPException(403, "Missing permission to add follow-up updates")
+    lead = await leads.find_one({"id": lid, "deleted_at": None}, {"_id": 0})
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    if "followup.view_all" not in perms and lead.get("assigned_counsellor_id") != user["id"]:
+        raise HTTPException(403, "This lead is not assigned to you")
+    if not (body.discussed or "").strip():
+        raise HTTPException(400, "Please describe what was discussed")
+    if body.status not in FU_STATUSES:
+        raise HTTPException(400, "Invalid status")
+    closing = body.status in ("Registered", "Lost")
+    if not closing and not body.next_followup_date:
+        raise HTTPException(400, "Next follow-up date is required")
+    if body.status == "Lost" and not (body.lost_reason or "").strip():
+        raise HTTPException(400, "Please provide a short reason for marking this lead as Lost")
+
+    nfd = None if closing else body.next_followup_date
+    nft = None if closing else body.next_followup_time
+    doc = {
+        "id": new_id(), "lead_id": lid, "type": "followup",
+        "author_id": user["id"], "author_name": user["name"],
+        "discussed": body.discussed.strip(), "status": body.status,
+        "next_followup_date": nfd, "next_followup_time": nft,
+        "lost_reason": (body.lost_reason or "").strip() or None,
+        "created_at": now_iso(),
+    }
+    await lead_updates.insert_one(dict(doc))
+    await leads.update_one({"id": lid}, {"$set": {
+        "status": body.status, "next_followup_date": nfd,
+        "next_followup_time": nft, "updated_at": now_iso(),
+    }})
+    await audit(user["id"], user["role"], "followup.add", "lead", lid, {"status": body.status})
+    return doc
+
+
+@api.delete("/updates/{uid}")
+async def delete_lead_update(uid: str, actor: dict = Depends(require_role("admin"))):
+    r = await lead_updates.delete_one({"id": uid})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Update not found")
+    await audit(actor["id"], actor["role"], "followup.delete", "update", uid, None)
+    return {"ok": True}
 
 
 # =====================================================================

@@ -81,6 +81,23 @@ class FollowUpCompleteIn(BaseModel):
     completed: bool = True
 
 
+class FollowUpUpdateIn(BaseModel):
+    discussed: str
+    status: str  # New | Contacted | Interested | Registered | Lost
+    next_followup_date: Optional[str] = None  # YYYY-MM-DD (IST calendar day)
+    next_followup_time: Optional[str] = None  # HH:MM (optional)
+    lost_reason: Optional[str] = None
+
+
+class AssignLeadIn(BaseModel):
+    counsellor_id: Optional[str] = None  # None = unassign
+
+
+class BulkAssignIn(BaseModel):
+    lead_ids: List[str]
+    counsellor_id: Optional[str] = None
+
+
 # ---------- Templates ----------
 class TemplateIn(BaseModel):
     name: str
