@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Layout from "./components/Layout";
 import ReceptionVisit from "./pages/reception/VisitForm";
 import CounsellorLeads from "./pages/counsellor/MyLeads";
+import Visited from "./pages/Visited";
 import LeadDetail from "./pages/counsellor/LeadDetail";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AllLeads from "./pages/admin/AllLeads";
@@ -43,6 +44,7 @@ export default function App() {
           <Route element={<Protected><Layout /></Protected>}>
             <Route path="/reception" element={<ReceptionVisit />} />
             <Route path="/my-leads" element={<CounsellorLeads />} />
+            <Route path="/visited" element={<Visited />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/leads" element={<AllLeads />} />

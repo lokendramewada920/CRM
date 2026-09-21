@@ -10,7 +10,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { toast } from "sonner";
 import { Phone, MessageCircle, Plus, CalendarClock, CalendarCheck2, AlertTriangle, CircleHelp, Users2 } from "lucide-react";
 
@@ -22,13 +22,14 @@ const EMPTY_ADD = {
   course_id: "", source: "", batch_preference: "", assigned_counsellor_id: "", remarks: "", consent: false,
 };
 
-export default function FollowupDashboard({ admin = false }) {
+export default function FollowupDashboard({ admin = false, variant = "followups" }) {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [courses, setCourses] = useState([]);
   const [counsellors, setCounsellors] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [q, setQ] = useState("");
 
   // Add-update dialog
   const [updLead, setUpdLead] = useState(null);
@@ -153,14 +154,14 @@ export default function FollowupDashboard({ admin = false }) {
     </div>
   );
 
-  const Section = ({ title, hindi, items, tone, icon: Icon, testid }) => (
+  const Section = ({ title, hindi, items, tone, icon: Icon, testid, cap = true }) => (
     <Card className={tone === "red" ? "border-rose-300 bg-rose-50/40" : ""} data-testid={testid}>
       <CardContent className="p-4">
         <div className={`flex items-center gap-2 font-semibold mb-3 ${tone === "red" ? "text-rose-700" : "text-slate-800"}`}>
           <Icon className="w-4 h-4" />
           <span>{title} {hindi && <span className="text-slate-400 font-normal text-sm">· {hindi}</span>} ({items.length})</span>
         </div>
-        <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+        <div className={`space-y-2 ${cap ? "max-h-[420px] overflow-y-auto pr-1" : ""}`}>
           {items.length === 0 && <div className="text-xs text-slate-400 py-2">Kuch nahi — sab clear ✅</div>}
           {items.map((l) => <Row key={l.id} l={l} />)}
         </div>
@@ -170,12 +171,15 @@ export default function FollowupDashboard({ admin = false }) {
 
   if (!data) return <div className="text-slate-500">Loading…</div>;
 
+  const isVisited = variant === "visited";
+  const visitedShown = (data.visited || []).filter((l) => !q || `${l.name} ${l.phone} ${l.email || ""}`.toLowerCase().includes(q.toLowerCase()));
+
   return (
     <div>
       <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">{admin ? "Follow-up Dashboard" : "My Dashboard"}</h1>
-          <p className="text-slate-500 text-sm mt-1">Aaj / Kal ke follow-ups aur saari visited enquiries ek jagah</p>
+          <h1 className="text-2xl md:text-3xl font-bold">{isVisited ? "Visited Enquiries" : (admin ? "Follow-up Dashboard" : "My Dashboard")}</h1>
+          <p className="text-slate-500 text-sm mt-1">{isVisited ? "Jo visit kar chuke / manually add hue — yahin se update karein" : "Aaj / Kal ke follow-ups ek jagah"}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {admin && (
@@ -191,19 +195,26 @@ export default function FollowupDashboard({ admin = false }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Section title="Aaj ke Follow-ups" hindi="Today" items={data.today} icon={CalendarCheck2} testid="section-today" />
-        <Section title="Kal ke Follow-ups" hindi="Tomorrow" items={data.tomorrow} icon={CalendarClock} testid="section-tomorrow" />
-        <Section title="Overdue Follow-ups" hindi="Chhoot gaye" items={data.overdue} tone="red" icon={AlertTriangle} testid="section-overdue" />
-        <Section title="No Follow-up Date Set" hindi="Date nahi" items={data.no_date} icon={CircleHelp} testid="section-nodate" />
-      </div>
+      {!isVisited && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <Section title="Aaj ke Follow-ups" hindi="Today" items={data.today} icon={CalendarCheck2} testid="section-today" />
+          <Section title="Kal ke Follow-ups" hindi="Tomorrow" items={data.tomorrow} icon={CalendarClock} testid="section-tomorrow" />
+          <Section title="Overdue Follow-ups" hindi="Chhoot gaye" items={data.overdue} tone="red" icon={AlertTriangle} testid="section-overdue" />
+          <Section title="No Follow-up Date Set" hindi="Date nahi" items={data.no_date} icon={CircleHelp} testid="section-nodate" />
+        </div>
+      )}
 
-      <Section title="Visited / All Enquiries" hindi="Aa chuke / manually added" items={data.visited} icon={Users2} testid="section-visited" />
+      {isVisited && (
+        <>
+          <Input placeholder="Search name, phone, email" value={q} onChange={(e) => setQ(e.target.value)} className="mb-4 max-w-md" data-testid="visited-search" />
+          <Section title="Visited / All Enquiries" hindi="Aa chuke / manually added" items={visitedShown} icon={Users2} testid="section-visited" cap={false} />
+        </>
+      )}
 
       {/* Add Update dialog */}
       <Dialog open={!!updLead} onOpenChange={(o) => !o && setUpdLead(null)}>
         <DialogContent data-testid="fu-update-dialog">
-          <DialogHeader><DialogTitle>Add Follow-up Update {updLead ? `· ${updLead.name}` : ""}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add Follow-up Update {updLead ? `· ${updLead.name}` : ""}</DialogTitle><DialogDescription>Log what was discussed and set the next follow-up.</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>What was discussed *</Label>
@@ -233,7 +244,7 @@ export default function FollowupDashboard({ admin = false }) {
       {/* WhatsApp dialog */}
       <Dialog open={!!waLead} onOpenChange={(o) => !o && setWaLead(null)}>
         <DialogContent data-testid="fu-wa-dialog">
-          <DialogHeader><DialogTitle>WhatsApp Message {waLead ? `· ${waLead.name}` : ""}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>WhatsApp Message {waLead ? `· ${waLead.name}` : ""}</DialogTitle><DialogDescription>Pick a template, review the message, then open WhatsApp.</DialogDescription></DialogHeader>
           <div>
             <Label>Template</Label>
             <Select value={tplId} onValueChange={regenWa}>
@@ -249,7 +260,7 @@ export default function FollowupDashboard({ admin = false }) {
       {/* Manual add dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="max-w-2xl" data-testid="manual-add-dialog">
-          <DialogHeader><DialogTitle>Add Lead Manually</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add Lead Manually</DialogTitle><DialogDescription>Add a walk-in or phone enquiry directly.</DialogDescription></DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2"><Label>Full Name *</Label><Input value={addForm.name} onChange={(e) => updAdd("name", e.target.value)} data-testid="add-name" /></div>
             <div><Label>Phone (WhatsApp) *</Label><Input value={addForm.phone} onChange={(e) => updAdd("phone", e.target.value)} placeholder="10-digit mobile" data-testid="add-phone" /></div>

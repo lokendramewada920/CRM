@@ -1,0 +1,27 @@
+{
+  "summary": "Phase B follow-up dashboard UI verified end-to-end for both counsellor (Priya) and admin. All 5 sections render with counts, Add Update dialog validations (empty discussed, missing next date for open statuses, Lost reason required, Registered/Lost hide date fields) all work, save moves lead between sections (overdue -> disappears when given a future date). Manual Add Lead dialog validates missing course and missing consent and successfully creates a lead that appears in Visited/All Enquiries. WhatsApp dialog opens with template picker, rendered preview, and Open WhatsApp button. Lead Detail inline follow-up form and timeline render for both roles; admin sees per-update delete button while counsellor does not. Admin dashboard shows counsellor filter + counsellor name on each lead row, and filter reloads scoped lists.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Add Update / WhatsApp / Manual Add dialogs", "issues": ["Missing DialogDescription / aria-describedby on DialogContent (Radix accessibility warning in console)"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: add DialogDescription to Add Update, WhatsApp and Manual Add dialogs to silence Radix a11y warnings"
+  ],
+  "critical_code_review_comments": [
+    "FollowupDashboard.jsx is ~296 lines and holds three dialogs; consider splitting AddUpdateDialog, WhatsAppDialog, ManualAddDialog into own files for maintainability.",
+    "openWa uses stale tplId when reopening dialog for different leads (regenWa fetches with the newly chosen template id but initial openWa may fire with previous tplId) - acceptable but worth review.",
+    "Manual add form validation only toasts errors; consider inline field-level errors for UX."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100%"},
+  "test_credentials": "priya@artsoffinance.in / Counsellor@123 ; admin@artsoffinance.in / Admin@12345",
+  "seed_data_creation": "Created a manual test lead 'TEST_Auto Lead' (9998887771) via Add Lead Manually; and moved overdue lead Rohan Mehta forward by 45 days during Add Update save test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All Phase B follow-up dashboard flows validated on preview URL. Seed data modified: Rohan Mehta next_followup_date pushed to today+45 (no longer overdue); Sneha Nair received a new update via counsellor login. A TEST_Auto Lead has been added to Priya's visited/all enquiries. If re-running, use a different overdue lead (Isha Verma still present) or reset seed."
+}

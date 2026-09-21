@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Users, BookOpen, MessageSquare, Settings, CreditCard, Shield, ScrollText, Trash2, UserPlus, ListChecks } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, BookOpen, MessageSquare, Settings, CreditCard, Shield, ScrollText, Trash2, UserPlus, ListChecks, UserCheck } from "lucide-react";
 
 const NAV = {
   reception: [
@@ -9,9 +9,11 @@ const NAV = {
   ],
   counsellor: [
     { to: "/my-leads", label: "My Leads", icon: ListChecks },
+    { to: "/visited", label: "Visited", icon: UserCheck },
   ],
   admin: [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/visited", label: "Visited", icon: UserCheck },
     { to: "/admin/leads", label: "All Leads", icon: ListChecks },
     { to: "/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/admin/courses", label: "Courses", icon: BookOpen },
