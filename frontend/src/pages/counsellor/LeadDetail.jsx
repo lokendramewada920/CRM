@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { MessageCircle, CreditCard, ChevronLeft, RefreshCw, FileText, Trash2 } from "lucide-react";
+import { LEAD_STATUSES, statusClass } from "../../lib/statuses";
 
-const STATUSES = ["New","Contacted","Interested","Registered","Lost"];
+const STATUSES = LEAD_STATUSES;
 
 export default function LeadDetail() {
   const { id } = useParams();
@@ -216,7 +217,7 @@ export default function LeadDetail() {
                     <div className="flex justify-between items-start gap-2">
                       <div className="text-xs text-slate-500">{u.author_name} · {new Date(u.created_at).toLocaleString()}</div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <Badge className={`status-${u.status}`}>{u.status}</Badge>
+                        <Badge className={statusClass(u.status)}>{u.status}</Badge>
                         {user.role === "admin" && <Button size="sm" variant="ghost" className="h-6 px-1" onClick={() => deleteUpdate(u.id)} data-testid={`fu-update-delete-${u.id}`}><Trash2 className="w-3.5 h-3.5" /></Button>}
                       </div>
                     </div>

@@ -9,6 +9,7 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { JOIN_TIMELINES } from "../../lib/statuses";
 
 const SOURCES = ["Instagram", "Google Search", "Friend Referral", "Walk-in", "Newspaper", "Other"];
 
@@ -18,7 +19,7 @@ export default function VisitForm() {
   const [form, setForm] = useState({
     name: "", phone: "", email: "", city: "", qualification: "",
     course_id: "", source: "", batch_preference: "",
-    assigned_counsellor_id: "", remarks: "", consent: false,
+    join_timeline: "", remarks: "", consent: false,
   });
   const [dup, setDup] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -44,7 +45,7 @@ export default function VisitForm() {
     if (!form.course_id) { toast.error("Select a course"); return; }
     setSaving(true);
     try {
-      const payload = { ...form, assigned_counsellor_id: form.assigned_counsellor_id || null };
+      const payload = { ...form };
       const r = await api.post("/leads", payload);
       setSavedLead(r.data);
       toast.success("Visit saved — lead created");
@@ -74,7 +75,7 @@ export default function VisitForm() {
               <div className="text-lg font-semibold mt-1">{assignedName}</div>
               <div className="text-xs text-slate-500 mt-2">They will contact you shortly.</div>
             </div>
-            <Button className="mt-6" onClick={() => { setSavedLead(null); setForm({ name:"", phone:"", email:"", city:"", qualification:"", course_id:"", source:"", batch_preference:"", assigned_counsellor_id:"", remarks:"", consent:false }); }} data-testid="visit-form-new-btn">
+            <Button className="mt-6" onClick={() => { setSavedLead(null); setForm({ name:"", phone:"", email:"", city:"", qualification:"", course_id:"", source:"", batch_preference:"", join_timeline:"", remarks:"", consent:false }); }} data-testid="visit-form-new-btn">
               Register Another Visit
             </Button>
           </CardContent>
@@ -139,12 +140,11 @@ export default function VisitForm() {
               <Input value={form.batch_preference} onChange={(e) => upd("batch_preference", e.target.value)} placeholder="e.g. Weekend / Evening" data-testid="visit-form-batch-input" />
             </div>
             <div>
-              <Label>Assigned Counsellor</Label>
-              <Select value={form.assigned_counsellor_id || "auto"} onValueChange={(v) => upd("assigned_counsellor_id", v === "auto" ? "" : v)}>
-                <SelectTrigger data-testid="visit-form-counsellor-select"><SelectValue /></SelectTrigger>
+              <Label>When do they want to join?</Label>
+              <Select value={form.join_timeline} onValueChange={(v) => upd("join_timeline", v)}>
+                <SelectTrigger data-testid="visit-form-join-select"><SelectValue placeholder="Select timeline" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Auto (Round-robin)</SelectItem>
-                  {counsellors.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {JOIN_TIMELINES.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

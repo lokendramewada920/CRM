@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
+import { LEAD_STATUSES, statusClass } from "../../lib/statuses";
 
-const STATUSES = ["All","New","Contacted","Interested","Registered","Lost"];
+const STATUSES = ["All", ...LEAD_STATUSES];
 
 export default function AllLeads() {
   const { has } = useAuth();
@@ -63,7 +64,7 @@ export default function AllLeads() {
               <tr key={l.id} className="border-t hover:bg-slate-50">
                 <td className="p-3"><Link to={`/leads/${l.id}`} className="text-teal-700 hover:underline" data-testid={`row-lead-${l.id}`}>{l.name}</Link></td>
                 <td className="p-3">{l.phone}</td>
-                <td className="p-3"><Badge className={`status-${l.status}`}>{l.status}</Badge></td>
+                <td className="p-3"><Badge className={statusClass(l.status)}>{l.status}</Badge></td>
                 <td className="p-3">{new Date(l.visit_date).toLocaleDateString()}</td>
                 <td className="p-3 text-right">{has("lead.delete") && <Button size="sm" variant="ghost" onClick={() => del(l.id)} data-testid={`delete-lead-${l.id}`}><Trash2 className="w-4 h-4" /></Button>}</td>
               </tr>

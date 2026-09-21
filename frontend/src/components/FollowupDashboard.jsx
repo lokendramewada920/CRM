@@ -12,9 +12,10 @@ import { Checkbox } from "./ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { toast } from "sonner";
-import { Phone, MessageCircle, Plus, CalendarClock, CalendarCheck2, AlertTriangle, CircleHelp, Users2 } from "lucide-react";
+import { Phone, MessageCircle, Plus, CalendarClock, CalendarCheck2, AlertTriangle, CircleHelp, Users2, ListChecks, Sparkles } from "lucide-react";
+import { LEAD_STATUSES, statusClass } from "../lib/statuses";
 
-const STATUSES = ["New", "Contacted", "Interested", "Registered", "Lost"];
+const STATUSES = LEAD_STATUSES;
 const SOURCES = ["Instagram", "Google Search", "Friend Referral", "Walk-in", "Newspaper", "Other"];
 
 const EMPTY_ADD = {
@@ -30,6 +31,8 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   const [templates, setTemplates] = useState([]);
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
+  const [sFilter, setSFilter] = useState("All");
+  const [showPlan, setShowPlan] = useState(false);
 
   // Add-update dialog
   const [updLead, setUpdLead] = useState(null);
@@ -123,7 +126,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
     if (!addForm.consent) { toast.error("Consent is required"); return; }
     setSavingAdd(true);
     try {
-      await api.post("/leads", { ...addForm, assigned_counsellor_id: addForm.assigned_counsellor_id || null });
+      await api.post("/leads", { ...addForm, assigned_counsellor_id: addForm.assigned_counsellor_id || null, entry_mode: "manual" });
       toast.success("Enquiry added");
       setShowAdd(false); setAddForm(EMPTY_ADD); load();
     } catch (e) {
@@ -140,7 +143,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
         <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
           <span>{l.phone}</span>
           <span>· {courseName(l.course_id)}</span>
-          <Badge className={`status-${l.status}`}>{l.status}</Badge>
+          <Badge className={statusClass(l.status)}>{l.status}</Badge>
           {admin && l.assigned_counsellor_name && <span>· {l.assigned_counsellor_name}</span>}
         </div>
         {l.last_discussion && <div className="text-xs text-slate-600 mt-1 italic line-clamp-1">“{l.last_discussion}”</div>}
@@ -172,7 +175,11 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   if (!data) return <div className="text-slate-500">Loading…</div>;
 
   const isVisited = variant === "visited";
-  const visitedShown = (data.visited || []).filter((l) => !q || `${l.name} ${l.phone} ${l.email || ""}`.toLowerCase().includes(q.toLowerCase()));
+  const planItems = [...(data.today || []), ...(data.overdue || [])];
+  const visitedShown = (data.form_leads || []).filter((l) =>
+    (sFilter === "All" || l.status === sFilter) &&
+    (!q || `${l.name} ${l.phone} ${l.email || ""}`.toLowerCase().includes(q.toLowerCase()))
+  );
 
   return (
     <div>
@@ -191,23 +198,36 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
               </SelectContent>
             </Select>
           )}
+          {!isVisited && !admin && <Button variant="outline" onClick={() => setShowPlan(true)} data-testid="today-plan-btn"><Sparkles className="w-4 h-4 mr-2" /> Aaj ka Plan</Button>}
           <Button onClick={() => setShowAdd(true)} data-testid="manual-add-lead-btn"><Plus className="w-4 h-4 mr-2" /> Add Lead Manually</Button>
         </div>
       </div>
 
       {!isVisited && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          <Section title="Aaj ke Follow-ups" hindi="Today" items={data.today} icon={CalendarCheck2} testid="section-today" />
-          <Section title="Kal ke Follow-ups" hindi="Tomorrow" items={data.tomorrow} icon={CalendarClock} testid="section-tomorrow" />
-          <Section title="Overdue Follow-ups" hindi="Chhoot gaye" items={data.overdue} tone="red" icon={AlertTriangle} testid="section-overdue" />
-          <Section title="No Follow-up Date Set" hindi="Date nahi" items={data.no_date} icon={CircleHelp} testid="section-nodate" />
-        </div>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <Section title="Aaj ke Follow-ups" hindi="Today" items={data.today} icon={CalendarCheck2} testid="section-today" />
+            <Section title="Kal ke Follow-ups" hindi="Tomorrow" items={data.tomorrow} icon={CalendarClock} testid="section-tomorrow" />
+            <Section title="Overdue Follow-ups" hindi="Chhoot gaye" items={data.overdue} tone="red" icon={AlertTriangle} testid="section-overdue" />
+            <Section title="No Follow-up Date Set" hindi="Date nahi" items={data.no_date} icon={CircleHelp} testid="section-nodate" />
+          </div>
+          <Section title="All Leads" hindi="Saare leads" items={data.all_leads} icon={ListChecks} testid="section-all" cap={false} />
+        </>
       )}
 
       {isVisited && (
         <>
-          <Input placeholder="Search name, phone, email" value={q} onChange={(e) => setQ(e.target.value)} className="mb-4 max-w-md" data-testid="visited-search" />
-          <Section title="Visited / All Enquiries" hindi="Aa chuke / manually added" items={visitedShown} icon={Users2} testid="section-visited" cap={false} />
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Input placeholder="Search name, phone, email" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" data-testid="visited-search" />
+            <Select value={sFilter} onValueChange={setSFilter}>
+              <SelectTrigger className="w-44" data-testid="visited-status-filter"><SelectValue placeholder="All statuses" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All statuses</SelectItem>
+                {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Section title="Visited Enquiries (form-filled)" hindi="Form bhara" items={visitedShown} icon={Users2} testid="section-visited" cap={false} />
         </>
       )}
 
@@ -300,6 +320,31 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
             </div>
           </div>
           <DialogFooter><Button onClick={submitAdd} disabled={savingAdd} data-testid="add-submit">{savingAdd ? "Adding…" : "Add Enquiry"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Today's Plan dialog */}
+      <Dialog open={showPlan} onOpenChange={setShowPlan}>
+        <DialogContent data-testid="today-plan-dialog">
+          <DialogHeader>
+            <DialogTitle>Aaj ka Plan · Today's Plan</DialogTitle>
+            <DialogDescription>{planItems.length} calls/WhatsApps to make today — {data.counts?.today || 0} due today, {data.counts?.overdue || 0} overdue.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {planItems.length === 0 && <div className="text-sm text-slate-400 py-4 text-center">Aaj koi follow-up nahi — sab clear ✅</div>}
+            {planItems.map((l) => (
+              <div key={l.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border" data-testid={`plan-row-${l.id}`}>
+                <div className="min-w-0">
+                  <Link to={`/leads/${l.id}`} className="font-medium hover:underline">{l.name}</Link>
+                  <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">{l.phone} <Badge className={statusClass(l.status)}>{l.status}</Badge></div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <a href={`tel:${l.phone}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md border hover:bg-slate-50" title="Call" data-testid={`plan-call-${l.id}`}><Phone className="w-3.5 h-3.5" /></a>
+                  <Button size="sm" variant="outline" className="h-8 wa-btn" onClick={() => { setShowPlan(false); openWa(l); }} title="WhatsApp" data-testid={`plan-wa-${l.id}`}><MessageCircle className="w-3.5 h-3.5" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

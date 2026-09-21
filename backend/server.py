@@ -244,6 +244,8 @@ async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permissi
         "source": body.source,
         "batch_preference": body.batch_preference,
         "assigned_counsellor_id": counsellor_id,
+        "join_timeline": body.join_timeline,
+        "entry_mode": body.entry_mode or "visit_form",
         "status": "New",
         "visit_date": visit_dt.isoformat(),
         "offer_expires_at": offer_expires.isoformat(),
@@ -352,6 +354,7 @@ async def dashboard_followups(counsellor_id: Optional[str] = None, user: dict = 
         key=lambda d: d["next_followup_date"],
     )
     no_date_list = [d for d in docs if not d.get("next_followup_date") and is_open(d)]
+    form_leads = [d for d in docs if d.get("entry_mode", "visit_form") != "manual"]
 
     return {
         "today": today_list,
@@ -359,11 +362,13 @@ async def dashboard_followups(counsellor_id: Optional[str] = None, user: dict = 
         "overdue": overdue_list,
         "upcoming": upcoming_list,
         "no_date": no_date_list,
+        "all_leads": docs,
+        "form_leads": form_leads,
         "visited": docs,
         "counts": {
             "today": len(today_list), "tomorrow": len(tomorrow_list),
             "overdue": len(overdue_list), "upcoming": len(upcoming_list),
-            "no_date": len(no_date_list), "visited": len(docs),
+            "no_date": len(no_date_list), "all_leads": len(docs), "form_leads": len(form_leads),
         },
     }
 
@@ -450,7 +455,7 @@ async def my_followups(user: dict = Depends(get_current_user)):
 
 
 # ---- Follow-up Updates (discussion timeline) ----
-FU_STATUSES = {"New", "Contacted", "Interested", "Registered", "Lost"}
+FU_STATUSES = {"New", "Contacted", "Visited", "Interested", "Possible Joining", "Future Joining", "Registered", "Lost"}
 
 
 @api.post("/leads/{lid}/updates")

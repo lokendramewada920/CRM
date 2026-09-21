@@ -51,6 +51,8 @@ class LeadCreateIn(BaseModel):
     source: Optional[str] = None
     batch_preference: Optional[str] = None
     assigned_counsellor_id: Optional[str] = None  # None = auto round-robin
+    join_timeline: Optional[str] = None  # Within 1-2 days | Within a week | Within 15 days | Not sure
+    entry_mode: Optional[str] = None  # visit_form (default) | manual
     remarks: Optional[str] = None
     consent: bool
 
@@ -65,6 +67,7 @@ class LeadUpdateIn(BaseModel):
     batch_preference: Optional[str] = None
     assigned_counsellor_id: Optional[str] = None
     status: Optional[str] = None
+    join_timeline: Optional[str] = None
     remarks: Optional[str] = None
 
 
