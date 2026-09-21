@@ -59,6 +59,7 @@ class LeadCreateIn(BaseModel):
 
 class LeadUpdateIn(BaseModel):
     name: Optional[str] = None
+    phone: Optional[str] = None
     email: Optional[EmailStr] = None
     city: Optional[str] = None
     qualification: Optional[str] = None
@@ -119,6 +120,8 @@ class MessageLogIn(BaseModel):
 # ---------- Payments ----------
 class CreatePaymentLinkIn(BaseModel):
     lead_id: str
+    amount: Optional[float] = None  # 500 or 1000
+    expiry: Optional[str] = None  # none | today | 24hrs
 
 
 # ---------- Settings ----------
@@ -128,6 +131,8 @@ class SettingsIn(BaseModel):
     offer_hours: Optional[int] = None  # if None, expires at 23:59 same day
     reception_can_send_whatsapp: Optional[bool] = None
     counsellors_view_all: Optional[bool] = None
+    razorpay_key_id: Optional[str] = None
+    razorpay_key_secret: Optional[str] = None
 
 
 # ---------- Roles ----------

@@ -24,7 +24,7 @@ const EMPTY_ADD = {
 };
 
 export default function FollowupDashboard({ admin = false, variant = "followups" }) {
-  const { user } = useAuth();
+  const { user, has } = useAuth();
   const [data, setData] = useState(null);
   const [courses, setCourses] = useState([]);
   const [counsellors, setCounsellors] = useState([]);
@@ -47,6 +47,8 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   const [waLead, setWaLead] = useState(null);
   const [tplId, setTplId] = useState("");
   const [preview, setPreview] = useState(null);
+  const [waAmount, setWaAmount] = useState("1000");
+  const [waExpiry, setWaExpiry] = useState("none");
 
   // Manual add dialog
   const [showAdd, setShowAdd] = useState(false);
@@ -58,6 +60,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   const [bulkFile, setBulkFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
+  const [bulkAssign, setBulkAssign] = useState("auto");
 
   const load = useCallback(() => {
     const qs = admin && filter !== "all" ? `?counsellor_id=${filter}` : "";
@@ -118,10 +121,20 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
   };
   const sendWa = async () => {
     if (!preview) return;
-    await api.post("/message-log", { lead_id: waLead.id, template_id: preview.template_id, rendered_body: preview.body, channel: "whatsapp" });
-    window.open(preview.whatsapp_link, "_blank");
-    setWaLead(null); load();
-    toast.success("Message logged. WhatsApp opened in a new tab.");
+    try {
+      let msg = preview;
+      if (has("payment.create")) {
+        await api.post("/payments/create-link", { lead_id: waLead.id, amount: Number(waAmount), expiry: waExpiry });
+        const r = await api.get(`/leads/${waLead.id}/preview-message?template_id=${preview.template_id}`);
+        msg = r.data;
+      }
+      await api.post("/message-log", { lead_id: waLead.id, template_id: msg.template_id, rendered_body: msg.body, channel: "whatsapp" });
+      window.open(msg.whatsapp_link, "_blank");
+      setWaLead(null); load();
+      toast.success("WhatsApp opened in a new tab");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to send");
+    }
   };
 
   // ---- Manual add ----
@@ -152,6 +165,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
     try {
       const fd = new FormData();
       fd.append("file", bulkFile);
+      if (bulkAssign !== "auto") fd.append("assign_to", bulkAssign);
       const r = await api.post("/leads/bulk-upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
       setBulkResult(r.data);
       toast.success(`Imported ${r.data.created} leads (${r.data.skipped} skipped)`);
@@ -198,7 +212,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
           <span>{title} {hindi && <span className="text-slate-400 font-normal text-sm">· {hindi}</span>} ({items.length})</span>
         </div>
         <div className={`space-y-2 ${cap ? "max-h-[420px] overflow-y-auto pr-1" : ""}`}>
-          {items.length === 0 && <div className="text-xs text-slate-400 py-2">Kuch nahi — sab clear ✅</div>}
+          {items.length === 0 && <div className="text-xs text-slate-400 py-2">Nothing here — all clear ✅</div>}
           {items.map((l) => <Row key={l.id} l={l} />)}
         </div>
       </CardContent>
@@ -219,7 +233,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
       <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">{isVisited ? "Visited Enquiries" : (admin ? "Follow-up Dashboard" : "My Dashboard")}</h1>
-          <p className="text-slate-500 text-sm mt-1">{isVisited ? "Jo visit kar chuke / manually add hue — yahin se update karein" : "Aaj / Kal ke follow-ups ek jagah"}</p>
+          <p className="text-slate-500 text-sm mt-1">{isVisited ? "View and update your visited enquiries here" : "Today's and tomorrow's follow-ups in one place"}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {admin && (
@@ -231,7 +245,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
               </SelectContent>
             </Select>
           )}
-          {!isVisited && !admin && <Button variant="outline" onClick={() => setShowPlan(true)} data-testid="today-plan-btn"><Sparkles className="w-4 h-4 mr-2" /> Aaj ka Plan</Button>}
+          {!isVisited && !admin && <Button variant="outline" onClick={() => setShowPlan(true)} data-testid="today-plan-btn"><Sparkles className="w-4 h-4 mr-2" /> Today's Plan</Button>}
           <Button variant="outline" onClick={() => { setShowBulk(true); setBulkResult(null); setBulkFile(null); }} data-testid="bulk-upload-btn"><Upload className="w-4 h-4 mr-2" /> Upload Excel</Button>
           <Button onClick={() => setShowAdd(true)} data-testid="manual-add-lead-btn"><Plus className="w-4 h-4 mr-2" /> Add Lead Manually</Button>
         </div>
@@ -240,12 +254,12 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
       {!isVisited && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <Section title="Aaj ke Follow-ups" hindi="Today" items={data.today} icon={CalendarCheck2} testid="section-today" />
-            <Section title="Kal ke Follow-ups" hindi="Tomorrow" items={data.tomorrow} icon={CalendarClock} testid="section-tomorrow" />
-            <Section title="Overdue Follow-ups" hindi="Chhoot gaye" items={data.overdue} tone="red" icon={AlertTriangle} testid="section-overdue" />
-            <Section title="No Follow-up Date Set" hindi="Date nahi" items={data.no_date} icon={CircleHelp} testid="section-nodate" />
+            <Section title="Today's Follow-ups" hindi="" items={data.today} icon={CalendarCheck2} testid="section-today" />
+            <Section title="Tomorrow's Follow-ups" hindi="" items={data.tomorrow} icon={CalendarClock} testid="section-tomorrow" />
+            <Section title="Overdue Follow-ups" hindi="" items={data.overdue} tone="red" icon={AlertTriangle} testid="section-overdue" />
+            <Section title="No Follow-up Date" hindi="" items={data.no_date} icon={CircleHelp} testid="section-nodate" />
           </div>
-          <Section title="All Leads" hindi="Saare leads" items={data.all_leads} icon={ListChecks} testid="section-all" cap={false} />
+          <Section title="All Leads" hindi="" items={data.all_leads} icon={ListChecks} testid="section-all" cap={false} />
         </>
       )}
 
@@ -261,7 +275,7 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
               </SelectContent>
             </Select>
           </div>
-          <Section title="Visited Enquiries (form-filled)" hindi="Form bhara" items={visitedShown} icon={Users2} testid="section-visited" cap={false} />
+          <Section title="Visited Enquiries" hindi="" items={visitedShown} icon={Users2} testid="section-visited" cap={false} />
         </>
       )}
 
@@ -305,9 +319,27 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
               <SelectTrigger data-testid="fu-wa-template"><SelectValue /></SelectTrigger>
               <SelectContent>{templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
             </Select>
+            {has("payment.create") && (
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <Label>Payment amount</Label>
+                  <Select value={waAmount} onValueChange={setWaAmount}>
+                    <SelectTrigger data-testid="fu-wa-amount"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="500">₹500</SelectItem><SelectItem value="1000">₹1000</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Link validity</Label>
+                  <Select value={waExpiry} onValueChange={setWaExpiry}>
+                    <SelectTrigger data-testid="fu-wa-expiry"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="none">Valid (no expiry)</SelectItem><SelectItem value="today">Today only</SelectItem><SelectItem value="24hrs">24 hours</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             {preview && <div className="mt-3 p-3 bg-emerald-50 rounded whitespace-pre-wrap text-sm" data-testid="fu-wa-preview">{preview.body}</div>}
           </div>
-          <DialogFooter><Button className="wa-btn" onClick={sendWa} disabled={!preview} data-testid="fu-wa-send">Open WhatsApp</Button></DialogFooter>
+          <DialogFooter><Button className="wa-btn" onClick={sendWa} disabled={!preview} data-testid="fu-wa-send">{has("payment.create") ? "Create Link & Open WhatsApp" : "Open WhatsApp"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -369,6 +401,16 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
               Header row columns: name, phone, email, city, qualification, course, source, batch_preference, join_timeline. Rows without a phone and duplicate phones are skipped.
             </div>
             <Button variant="ghost" size="sm" onClick={downloadSample} data-testid="bulk-sample-btn"><FileDown className="w-4 h-4 mr-2" /> Download sample CSV</Button>
+            <div>
+              <Label>Assign all imported leads to</Label>
+              <Select value={bulkAssign} onValueChange={setBulkAssign}>
+                <SelectTrigger data-testid="bulk-assign-select"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto (Round-robin)</SelectItem>
+                  {counsellors.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <Input type="file" accept=".xlsx,.csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} data-testid="bulk-file-input" />
             {bulkResult && (
               <div className="p-3 rounded bg-slate-50 text-sm" data-testid="bulk-result">
@@ -385,11 +427,11 @@ export default function FollowupDashboard({ admin = false, variant = "followups"
       <Dialog open={showPlan} onOpenChange={setShowPlan}>
         <DialogContent data-testid="today-plan-dialog">
           <DialogHeader>
-            <DialogTitle>Aaj ka Plan · Today's Plan</DialogTitle>
+            <DialogTitle>Today's Plan</DialogTitle>
             <DialogDescription>{planItems.length} calls/WhatsApps to make today — {data.counts?.today || 0} due today, {data.counts?.overdue || 0} overdue.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {planItems.length === 0 && <div className="text-sm text-slate-400 py-4 text-center">Aaj koi follow-up nahi — sab clear ✅</div>}
+            {planItems.length === 0 && <div className="text-sm text-slate-400 py-4 text-center">No follow-ups for today — all clear ✅</div>}
             {planItems.map((l) => (
               <div key={l.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border" data-testid={`plan-row-${l.id}`}>
                 <div className="min-w-0">

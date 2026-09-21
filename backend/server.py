@@ -2,13 +2,14 @@
 import os
 import io
 import csv
+import time
 import logging
 import openpyxl
 from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -267,7 +268,7 @@ async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permissi
 
 
 @api.post("/leads/bulk-upload")
-async def bulk_upload_leads(file: UploadFile = File(...), actor: dict = Depends(require_permission("lead.create"))):
+async def bulk_upload_leads(file: UploadFile = File(...), assign_to: Optional[str] = Form(None), actor: dict = Depends(require_permission("lead.create"))):
     content = await file.read()
     fname = (file.filename or "").lower()
     rows: list[dict] = []
@@ -315,7 +316,7 @@ async def bulk_upload_leads(file: UploadFile = File(...), actor: dict = Depends(
             continue
         cn = (row.get("course") or row.get("course_name") or "").strip().lower()
         course_id = cmap.get(cn)
-        counsellor_id = actor["id"] if actor["role"] == "counsellor" else await _round_robin_counsellor()
+        counsellor_id = assign_to or (actor["id"] if actor["role"] == "counsellor" else await _round_robin_counsellor())
         visit_dt = now_utc()
         doc = {
             "id": new_id(),
@@ -693,20 +694,29 @@ async def create_payment_link(body: CreatePaymentLinkIn, user: dict = Depends(re
     lead = await leads.find_one({"id": body.lead_id, "deleted_at": None}, {"_id": 0})
     if not lead:
         raise HTTPException(404, "Lead not found")
-    course = await courses.find_one({"id": lead["course_id"]}, {"_id": 0}) or {}
+    course = await courses.find_one({"id": lead.get("course_id")}, {"_id": 0}) or {}
     settings = await get_settings()
-    reg_amount = float(settings["registration_amount"])
-    fee = float(course.get("total_fee", 0))
-    dp = float(settings["discount_percent"])
-    discount_amount = round(fee * dp / 100.0, 2)
+    reg_amount = float(body.amount) if body.amount else float(settings.get("registration_amount") or 1000)
 
-    provider = get_provider()
+    now_epoch = int(time.time())
+    expire_by = None
+    if body.expiry == "24hrs":
+        expire_by = now_epoch + 24 * 3600
+    elif body.expiry == "today":
+        from utils import IST
+        end = datetime.now(IST).replace(hour=23, minute=59, second=0, microsecond=0)
+        expire_by = int(end.timestamp())
+    if expire_by and expire_by - now_epoch < 16 * 60:
+        expire_by = now_epoch + 16 * 60
+
+    provider = get_provider(settings.get("razorpay_key_id"), settings.get("razorpay_key_secret"))
     info = provider.create_link(
         amount_paise=int(reg_amount * 100),
-        description=f"Registration - {course.get('name','Course')}"[:255],
-        notes={"lead_id": lead["id"], "course_id": lead["course_id"]},
-        reference_id=lead["id"][:40],
+        description=f"Registration - {course.get('name','Arts of Finance')}"[:255],
+        notes={"lead_id": lead["id"], "course_id": lead.get("course_id") or ""},
+        reference_id=(lead["id"] + str(now_epoch))[:40],
         customer={"name": lead["name"], "contact": lead["phone"], "email": lead.get("email") or ""},
+        expire_by=expire_by,
     )
     doc = {
         "id": new_id(),
@@ -716,15 +726,16 @@ async def create_payment_link(body: CreatePaymentLinkIn, user: dict = Depends(re
         "short_url": info["short_url"],
         "amount": reg_amount,
         "amount_paid": 0.0,
-        "discount_amount": discount_amount,
+        "discount_amount": 0.0,
         "status": info["status"],
+        "expiry": body.expiry or "none",
         "created_by": user["id"],
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
     to_insert = dict(doc)
     await payments.insert_one(to_insert)
-    await audit(user["id"], user["role"], "payment.create", "lead", lead["id"], {"link_id": info["link_id"]})
+    await audit(user["id"], user["role"], "payment.create", "lead", lead["id"], {"link_id": info["link_id"], "amount": reg_amount})
     return doc
 
 
@@ -733,7 +744,8 @@ async def check_payment(pid: str, user: dict = Depends(require_permission("payme
     p = await payments.find_one({"id": pid}, {"_id": 0})
     if not p:
         raise HTTPException(404, "Payment not found")
-    provider = get_provider()
+    settings = await get_settings()
+    provider = get_provider(settings.get("razorpay_key_id"), settings.get("razorpay_key_secret"))
     info = provider.fetch_link(p["razorpay_link_id"])
     from scheduler import _apply_payment_update
     if info["status"] != p["status"]:

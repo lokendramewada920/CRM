@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from db import payments, leads, courses, receipts as receipts_coll
 from payments_provider import get_provider
 from receipts import generate_receipt_pdf
-from utils import now_iso, new_id, audit
+from utils import now_iso, new_id, audit, get_settings
 
 log = logging.getLogger("scheduler")
 scheduler = AsyncIOScheduler(timezone="UTC")
@@ -21,7 +21,8 @@ BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 async def poll_pending_payments() -> int:
     """Iterate over pending payments, fetch status, mark paid if so."""
-    provider = get_provider()
+    settings = await get_settings()
+    provider = get_provider(settings.get("razorpay_key_id"), settings.get("razorpay_key_secret"))
     updated = 0
     async for p in payments.find({"status": {"$in": ["created", "partially_paid"]}}):
         try:

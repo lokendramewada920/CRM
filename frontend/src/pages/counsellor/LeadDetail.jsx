@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { MessageCircle, CreditCard, ChevronLeft, RefreshCw, FileText, Trash2 } from "lucide-react";
-import { LEAD_STATUSES, statusClass } from "../../lib/statuses";
+import { LEAD_STATUSES, statusClass, JOIN_TIMELINES } from "../../lib/statuses";
 
 const STATUSES = LEAD_STATUSES;
 
@@ -20,6 +20,9 @@ export default function LeadDetail() {
   const { id } = useParams();
   const { user, has } = useAuth();
   const [lead, setLead] = useState(null);
+  const [counsellors, setCounsellors] = useState([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({});
   const [courses, setCourses] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [tplId, setTplId] = useState("");
@@ -42,6 +45,7 @@ export default function LeadDetail() {
   useEffect(() => {
     load();
     api.get("/courses").then((r) => setCourses(r.data));
+    api.get("/counsellors").then((r) => setCounsellors(r.data));
     api.get("/templates").then((r) => { setTemplates(r.data); const d = r.data.find((t)=>t.is_default) || r.data[0]; if (d) setTplId(d.id); });
   }, [id]);
 
@@ -130,6 +134,24 @@ export default function LeadDetail() {
     load();
   };
 
+  const openEdit = () => {
+    setEditForm({
+      name: lead.name || "", phone: lead.phone || "", email: lead.email || "",
+      city: lead.city || "", qualification: lead.qualification || "",
+      batch_preference: lead.batch_preference || "", join_timeline: lead.join_timeline || "",
+      remarks: lead.remarks || "", assigned_counsellor_id: lead.assigned_counsellor_id || "",
+    });
+    setEditOpen(true);
+  };
+  const saveEdit = async () => {
+    if (!editForm.name?.trim() || !editForm.phone?.trim()) { toast.error("Name and phone are required"); return; }
+    try {
+      await api.patch(`/leads/${id}`, { ...editForm, email: editForm.email || null });
+      toast.success("Lead updated");
+      setEditOpen(false); load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Failed to update"); }
+  };
+
   if (!lead) return <div className="p-10 text-slate-500">Loading...</div>;
   const course = courses.find((c) => c.id === lead.course_id);
 
@@ -142,6 +164,7 @@ export default function LeadDetail() {
           <div className="text-slate-500 text-sm">{lead.phone} · {lead.email || "—"} · {lead.city || "—"}</div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={openEdit} data-testid="edit-lead-btn">Edit Details</Button>
           <Button className="wa-btn" onClick={doPreview} data-testid="whatsapp-btn"><MessageCircle className="w-4 h-4 mr-2" /> Send WhatsApp</Button>
           {has("payment.create") && <Button variant="outline" onClick={createPayment} data-testid="create-payment-link-btn"><CreditCard className="w-4 h-4 mr-2" /> Create Payment Link</Button>}
         </div>
@@ -346,6 +369,36 @@ export default function LeadDetail() {
             <div><Label>Note</Label><Input value={fuNote} onChange={(e) => setFuNote(e.target.value)} /></div>
           </div>
           <DialogFooter><Button onClick={addFollowUp} data-testid="fu-save-btn">Schedule</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl" data-testid="edit-lead-dialog">
+          <DialogHeader><DialogTitle>Edit Lead Details</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><Label>Full Name *</Label><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} data-testid="edit-lead-name" /></div>
+            <div><Label>Phone *</Label><Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} data-testid="edit-lead-phone" /></div>
+            <div><Label>Email</Label><Input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} data-testid="edit-lead-email" /></div>
+            <div><Label>City</Label><Input value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} data-testid="edit-lead-city" /></div>
+            <div><Label>Qualification</Label><Input value={editForm.qualification} onChange={(e) => setEditForm({ ...editForm, qualification: e.target.value })} data-testid="edit-lead-qual" /></div>
+            <div><Label>Preferred Batch</Label><Input value={editForm.batch_preference} onChange={(e) => setEditForm({ ...editForm, batch_preference: e.target.value })} data-testid="edit-lead-batch" /></div>
+            <div>
+              <Label>When do they want to join?</Label>
+              <Select value={editForm.join_timeline || "none"} onValueChange={(v) => setEditForm({ ...editForm, join_timeline: v === "none" ? "" : v })}>
+                <SelectTrigger data-testid="edit-lead-join"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent><SelectItem value="none">—</SelectItem>{JOIN_TIMELINES.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Assigned Counsellor</Label>
+              <Select value={editForm.assigned_counsellor_id || "none"} onValueChange={(v) => setEditForm({ ...editForm, assigned_counsellor_id: v === "none" ? "" : v })}>
+                <SelectTrigger data-testid="edit-lead-counsellor"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent><SelectItem value="none">Unassigned</SelectItem>{counsellors.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2"><Label>Remarks</Label><Input value={editForm.remarks} onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })} data-testid="edit-lead-remarks" /></div>
+          </div>
+          <DialogFooter><Button onClick={saveEdit} data-testid="edit-lead-save">Save Changes</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

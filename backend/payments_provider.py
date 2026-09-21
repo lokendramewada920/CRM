@@ -17,7 +17,7 @@ import razorpay
 class PaymentProvider(Protocol):
     name: str
 
-    def create_link(self, amount_paise: int, description: str, notes: dict, reference_id: str, customer: dict) -> dict: ...
+    def create_link(self, amount_paise: int, description: str, notes: dict, reference_id: str, customer: dict, expire_by: Optional[int] = None) -> dict: ...
     def fetch_link(self, link_id: str) -> dict: ...
 
 
@@ -27,7 +27,7 @@ class RazorpayProvider:
     def __init__(self, key_id: str, key_secret: str) -> None:
         self.client = razorpay.Client(auth=(key_id, key_secret))
 
-    def create_link(self, amount_paise: int, description: str, notes: dict, reference_id: str, customer: dict) -> dict:
+    def create_link(self, amount_paise: int, description: str, notes: dict, reference_id: str, customer: dict, expire_by: Optional[int] = None) -> dict:
         payload = {
             "amount": amount_paise,
             "currency": "INR",
@@ -39,6 +39,8 @@ class RazorpayProvider:
             "reminder_enable": False,
             "notes": notes,
         }
+        if expire_by:
+            payload["expire_by"] = expire_by
         r = self.client.payment_link.create(payload)
         return {
             "link_id": r["id"],
@@ -67,7 +69,7 @@ class MockProvider:
     name = "mock"
     _store: dict = {}
 
-    def create_link(self, amount_paise: int, description: str, notes: dict, reference_id: str, customer: dict) -> dict:
+    def create_link(self, amount_paise: int, description: str, notes: dict, reference_id: str, customer: dict, expire_by: Optional[int] = None) -> dict:
         lid = "plink_mock_" + uuid.uuid4().hex[:12]
         self._store[lid] = {"created_at": time.time(), "amount": amount_paise}
         return {
@@ -94,9 +96,9 @@ class MockProvider:
         }
 
 
-def get_provider() -> PaymentProvider:
-    kid = os.environ.get("RAZORPAY_KEY_ID", "").strip()
-    ks = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+def get_provider(key_id: Optional[str] = None, key_secret: Optional[str] = None) -> PaymentProvider:
+    kid = (key_id or os.environ.get("RAZORPAY_KEY_ID", "")).strip()
+    ks = (key_secret or os.environ.get("RAZORPAY_KEY_SECRET", "")).strip()
     if kid and ks and not kid.startswith("rzp_test_XXXX"):
         return RazorpayProvider(kid, ks)
     return MockProvider()

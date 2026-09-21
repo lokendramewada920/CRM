@@ -48,6 +48,7 @@ async def seed() -> None:
         {"name": "Admin", "email": "admin@artsoffinance.in", "password": "Admin@12345", "role": "admin", "phone": "9999900001"},
         {"name": "Priya (Counsellor)", "email": "priya@artsoffinance.in", "password": "Counsellor@123", "role": "counsellor", "phone": "9999900002"},
         {"name": "Rahul (Counsellor)", "email": "rahul@artsoffinance.in", "password": "Counsellor@123", "role": "counsellor", "phone": "9999900003"},
+        {"name": "Anjali (Counsellor)", "email": "anjali@artsoffinance.in", "password": "Counsellor@123", "role": "counsellor", "phone": "9999900005"},
         {"name": "Reception", "email": "reception@artsoffinance.in", "password": "Reception@123", "role": "reception", "phone": "9999900004"},
     ]
     for u in demo_users:
