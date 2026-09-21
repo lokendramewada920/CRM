@@ -26,7 +26,7 @@ async def seed() -> None:
         )
     # Ensure existing role docs pick up newly added permissions (safe migration)
     await roles.update_one({"name": "admin"}, {"$set": {"permissions": ALL_PERMISSIONS}})
-    await roles.update_one({"name": "counsellor"}, {"$addToSet": {"permissions": "followup.add_own"}})
+    await roles.update_one({"name": "counsellor"}, {"$addToSet": {"permissions": {"$each": ["followup.add_own", "lead.create"]}}})
 
     # Settings singleton
     await settings_coll.update_one(

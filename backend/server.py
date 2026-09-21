@@ -225,7 +225,9 @@ async def create_lead(body: LeadCreateIn, actor: dict = Depends(require_permissi
     course = await courses.find_one({"id": body.course_id})
     if not course:
         raise HTTPException(400, "Course not found")
-    counsellor_id = body.assigned_counsellor_id or await _round_robin_counsellor()
+    counsellor_id = body.assigned_counsellor_id
+    if not counsellor_id:
+        counsellor_id = actor["id"] if actor["role"] == "counsellor" else await _round_robin_counsellor()
 
     settings = await get_settings()
     visit_dt = now_utc()
@@ -299,6 +301,71 @@ async def list_leads(
         query["visit_date"] = {"$regex": f"^{today}"}
     docs = await leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return docs
+
+
+@api.get("/dashboard/followups")
+async def dashboard_followups(counsellor_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+    perms = await get_effective_permissions(user)
+    if "lead.view_all" not in perms and "lead.view_own" not in perms:
+        raise HTTPException(403, "No permission to view leads")
+    query: dict = {"deleted_at": None}
+    if "lead.view_all" in perms:
+        if counsellor_id:
+            query["assigned_counsellor_id"] = counsellor_id
+    else:
+        settings = await get_settings()
+        if user["role"] == "counsellor" and not settings.get("counsellors_view_all"):
+            query["assigned_counsellor_id"] = user["id"]
+        elif counsellor_id:
+            query["assigned_counsellor_id"] = counsellor_id
+
+    docs = await leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    ids = [d["id"] for d in docs]
+    last_map: dict = {}
+    if ids:
+        ups = await lead_updates.find({"lead_id": {"$in": ids}}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+        for u in ups:
+            last_map.setdefault(u["lead_id"], u.get("discussed"))
+    cmap: dict = {}
+    for c in await users.find({"role": "counsellor"}, {"_id": 0, "password_hash": 0}).to_list(200):
+        cmap[c["id"]] = c["name"]
+
+    for d in docs:
+        d["last_discussion"] = last_map.get(d["id"])
+        d["assigned_counsellor_name"] = cmap.get(d.get("assigned_counsellor_id"))
+
+    today = ist_date_str(0)
+    tomorrow = ist_date_str(1)
+    week_ahead = ist_date_str(7)
+
+    def is_open(d: dict) -> bool:
+        return d["status"] not in ("Registered", "Lost")
+
+    today_list = [d for d in docs if d.get("next_followup_date") == today]
+    tomorrow_list = [d for d in docs if d.get("next_followup_date") == tomorrow]
+    overdue_list = sorted(
+        [d for d in docs if d.get("next_followup_date") and d["next_followup_date"] < today and is_open(d)],
+        key=lambda d: d["next_followup_date"],
+    )
+    upcoming_list = sorted(
+        [d for d in docs if d.get("next_followup_date") and today < d["next_followup_date"] <= week_ahead],
+        key=lambda d: d["next_followup_date"],
+    )
+    no_date_list = [d for d in docs if not d.get("next_followup_date") and is_open(d)]
+
+    return {
+        "today": today_list,
+        "tomorrow": tomorrow_list,
+        "overdue": overdue_list,
+        "upcoming": upcoming_list,
+        "no_date": no_date_list,
+        "visited": docs,
+        "counts": {
+            "today": len(today_list), "tomorrow": len(tomorrow_list),
+            "overdue": len(overdue_list), "upcoming": len(upcoming_list),
+            "no_date": len(no_date_list), "visited": len(docs),
+        },
+    }
 
 
 @api.get("/leads/{lid}")

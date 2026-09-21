@@ -19,7 +19,7 @@ ALL_PERMISSIONS = [
 DEFAULT_ROLE_PERMISSIONS = {
     "admin": ALL_PERMISSIONS,
     "counsellor": [
-        "lead.view_own", "lead.edit",
+        "lead.create", "lead.view_own", "lead.edit",
         "notes.add", "followup.manage", "followup.add_own",
         "message.send", "payment.create", "payment.view",
     ],
