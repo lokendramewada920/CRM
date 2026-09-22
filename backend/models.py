@@ -25,6 +25,8 @@ class UserCreateIn(BaseModel):
 
 class UserUpdateIn(BaseModel):
     name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(default=None, min_length=12)
     role: Optional[str] = None
     active: Optional[bool] = None
     phone: Optional[str] = None
@@ -50,9 +52,9 @@ class LeadCreateIn(BaseModel):
     course_id: Optional[str] = None
     source: Optional[str] = None
     batch_preference: Optional[str] = None
-    assigned_counsellor_id: Optional[str] = None  # None = auto round-robin
-    join_timeline: Optional[str] = None  # Within 1-2 days | Within a week | Within 15 days | Not sure
-    entry_mode: Optional[str] = None  # visit_form (default) | manual | bulk
+    assigned_counsellor_id: Optional[str] = None
+    join_timeline: Optional[str] = None
+    entry_mode: Optional[str] = None
     remarks: Optional[str] = None
     consent: bool = False
 
@@ -87,14 +89,14 @@ class FollowUpCompleteIn(BaseModel):
 
 class FollowUpUpdateIn(BaseModel):
     discussed: str
-    status: str  # New | Contacted | Interested | Registered | Lost
-    next_followup_date: Optional[str] = None  # YYYY-MM-DD (IST calendar day)
-    next_followup_time: Optional[str] = None  # HH:MM (optional)
+    status: str
+    next_followup_date: Optional[str] = None
+    next_followup_time: Optional[str] = None
     lost_reason: Optional[str] = None
 
 
 class AssignLeadIn(BaseModel):
-    counsellor_id: Optional[str] = None  # None = unassign
+    counsellor_id: Optional[str] = None
 
 
 class BulkAssignIn(BaseModel):
@@ -120,15 +122,15 @@ class MessageLogIn(BaseModel):
 # ---------- Payments ----------
 class CreatePaymentLinkIn(BaseModel):
     lead_id: str
-    amount: Optional[float] = None  # 500 or 1000
-    expiry: Optional[str] = None  # none | today | 24hrs
+    amount: Optional[float] = None
+    expiry: Optional[str] = None
 
 
 # ---------- Settings ----------
 class SettingsIn(BaseModel):
     registration_amount: Optional[float] = None
     discount_percent: Optional[float] = None
-    offer_hours: Optional[int] = None  # if None, expires at 23:59 same day
+    offer_hours: Optional[int] = None
     reception_can_send_whatsapp: Optional[bool] = None
     counsellors_view_all: Optional[bool] = None
     razorpay_key_id: Optional[str] = None
