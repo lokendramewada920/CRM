@@ -25,7 +25,9 @@ export default function UsersPage() {
   const save = async () => {
     try {
       if (form.id) {
-        await api.patch(`/users/${form.id}`, { name: form.name, role: form.role, phone: form.phone });
+        const payload = { name: form.name, email: form.email, role: form.role, phone: form.phone };
+        if (form.password) payload.password = form.password;
+        await api.patch(`/users/${form.id}`, payload);
         toast.success("User updated");
       } else {
         await api.post("/users", { name: form.name, email: form.email, password: form.password, role: form.role, phone: form.phone });
@@ -62,8 +64,8 @@ export default function UsersPage() {
           <DialogHeader><DialogTitle>{form.id ? "Edit User" : "Add User"}</DialogTitle><DialogDescription>{form.id ? "Update team member details." : "Create a new team member."}</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="user-name-input" /></div>
-            {!form.id && <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="user-email-input" /></div>}
-            {!form.id && <div><Label>Password</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} data-testid="user-password-input" /></div>}
+            <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="user-email-input" /></div>
+            <div><Label>{form.id ? "New Password (leave blank to keep current)" : "Password"}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} minLength={form.id ? 12 : 6} data-testid="user-password-input" /></div>
             <div><Label>Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                 <SelectTrigger data-testid="user-role-select"><SelectValue /></SelectTrigger>
