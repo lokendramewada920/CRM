@@ -133,6 +133,17 @@ async def update_user(uid: str, body: UserUpdateIn, actor: dict = Depends(requir
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise HTTPException(400, "No changes")
+
+    if "email" in updates:
+        new_email = str(updates["email"]).lower()
+        existing = await users.find_one({"email": new_email, "id": {"$ne": uid}})
+        if existing:
+            raise HTTPException(409, "Email already used")
+        updates["email"] = new_email
+
+    if "password" in updates:
+        updates["password_hash"] = hash_password(updates.pop("password"))
+
     updates["updated_at"] = now_iso()
     r = await users.update_one({"id": uid}, {"$set": updates})
     if r.matched_count == 0:
