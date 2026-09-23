@@ -10,8 +10,8 @@ import { toast } from "sonner";
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState("admin@artsoffinance.in");
-  const [password, setPassword] = useState("Admin@12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
@@ -63,11 +63,6 @@ export default function Login() {
                 {loading ? "Signing in…" : "Sign in"}
               </Button>
             </form>
-            <div className="mt-5 text-xs text-slate-500 space-y-1">
-              <div><b>Admin:</b> admin@artsoffinance.in / Admin@12345</div>
-              <div><b>Counsellor:</b> priya@artsoffinance.in / Counsellor@123</div>
-              <div><b>Reception:</b> reception@artsoffinance.in / Reception@123</div>
-            </div>
           </CardContent>
         </Card>
       </div>
