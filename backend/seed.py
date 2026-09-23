@@ -93,49 +93,15 @@ async def seed() -> None:
             "created_at": now_iso(),
         })
 
+    # Delete legacy demo/test leads and their follow-up timeline records.
+    demo_leads = await leads.find({"demo": True}, {"id": 1}).to_list(1000)
+    demo_ids = [item["id"] for item in demo_leads if item.get("id")]
+    if demo_ids:
+        await lead_updates.delete_many({"lead_id": {"$in": demo_ids}})
+        await leads.delete_many({"id": {"$in": demo_ids}})
+
     print("Seed complete.")
-    await _seed_demo_followups()
 
-
-async def _seed_demo_followups() -> None:
-    """Idempotent demo leads with follow-up updates so Today/Overdue/Upcoming sections can be tested."""
-    if await leads.find_one({"demo": True}):
-        return
-    priya = await users.find_one({"email": "priya@artsoffinance.in"})
-    course = await courses.find_one({})
-    if not priya or not course:
-        return
-    samples = [
-        ("Aarav Sharma", "9810000001", "today", "Contacted", "Interested in weekend batch, asked for full fee details"),
-        ("Isha Verma", "9810000002", "overdue", "Interested", "Wanted to discuss with parents, promised a callback"),
-        ("Rohan Mehta", "9810000003", "overdue", "Contacted", "Asked about EMI / instalment options"),
-        ("Sneha Nair", "9810000004", "tomorrow", "Interested", "Will visit again with documents"),
-        ("Kabir Singh", "9810000005", "upcoming", "New", "First enquiry, brochure shared on WhatsApp"),
-        ("Ananya Rao", "9810000006", "none", "New", "Walk-in enquiry, no callback scheduled yet"),
-    ]
-    day_map = {"today": ist_date_str(0), "overdue": ist_date_str(-2), "tomorrow": ist_date_str(1), "upcoming": ist_date_str(4), "none": None}
-    for name, phone, when, status, discussed in samples:
-        visit_dt = now_utc()
-        lid = new_id()
-        nfd = day_map[when]
-        await leads.insert_one({
-            "id": lid, "name": name, "phone": phone, "email": None, "city": "Mumbai",
-            "qualification": "B.Com", "course_id": course["id"], "source": "Walk-in",
-            "batch_preference": "Weekend", "assigned_counsellor_id": priya["id"],
-            "status": status, "visit_date": visit_dt.isoformat(),
-            "offer_expires_at": compute_offer_expiry(visit_dt, None).isoformat(),
-            "consent": True, "remarks": "", "created_by": priya["id"],
-            "created_at": now_iso(), "updated_at": now_iso(), "deleted_at": None,
-            "next_followup_date": nfd, "next_followup_time": None, "demo": True,
-        })
-        await lead_updates.insert_one({
-            "id": new_id(), "lead_id": lid, "type": "followup",
-            "author_id": priya["id"], "author_name": priya["name"],
-            "discussed": discussed, "status": status,
-            "next_followup_date": nfd, "next_followup_time": None, "lost_reason": None,
-            "created_at": now_iso(),
-        })
-    print("Demo follow-up data seeded.")
 
 
 if __name__ == "__main__":
